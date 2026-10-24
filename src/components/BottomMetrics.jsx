@@ -136,10 +136,10 @@ export default function BottomMetrics({ signsDetectedCount, spokenMessagesCount 
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                Sign at your own pace
+                Separate & space naturally
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                Use clear gestures and pause between phrases.
+                Show 🖐️ High-Five to separate letters into words, and 🙌 Two Hands to add space.
               </div>
             </div>
           </div>

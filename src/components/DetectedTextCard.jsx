@@ -206,14 +206,14 @@ export default function DetectedTextCard({
               lineHeight: 1.3,
               marginBottom: '10px'
             }}>
-              Your words will appear here.
+              Your spelled words will appear here.
             </h2>
             <p style={{
               fontSize: '14px',
               color: 'var(--text-secondary)',
               lineHeight: 1.5
             }}>
-              Signs become text in real time. Review or edit your message before you speak it aloud.
+              Spell letters with hand signs (A–Z). Show 🖐️ <strong>High-Five</strong> (open hand) to separate letters into words, and 🙌 <strong>Two Hands</strong> to add spaces between words!
             </p>
           </div>
         ) : (

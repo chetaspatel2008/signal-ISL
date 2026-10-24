@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera, CameraOff, Scan, RotateCcw, Play, Square, Users, Sparkles, Type, Hash, MessageSquare, Space, Delete, Clock, CheckCircle2 } from 'lucide-react';
-import { classifyHands, ALPHABET_A_TO_Z, NUMBERS_0_TO_10, FULL_SIGN_VOCABULARY, distance } from '../utils/signClassifier';
+import { Camera, CameraOff, Scan, RotateCcw, Play, Square, Users, Sparkles, Type, Space, Delete, Clock, CheckCircle2, Hand } from 'lucide-react';
+import { classifyHands, ALPHABET_A_TO_Z, distance } from '../utils/signClassifier';
 import { uniSignStreamProcessor } from '../utils/uniSignEngine';
 
 export default function SignInputCard({
@@ -26,7 +26,6 @@ export default function SignInputCard({
   const [currentGesture, setCurrentGesture] = useState(null);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
   const [targetSecondPerson, setTargetSecondPerson] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('All');
 
   // Hold-to-Confirm steady recognition states (gives user time to show sign)
   const [candidateGesture, setCandidateGesture] = useState(null);
@@ -65,6 +64,9 @@ export default function SignInputCard({
     jitterFrames: 0
   });
   const confirmedTimeoutRef = useRef(null);
+  const pendingSignRef = useRef(null);
+  const lastHighFiveTimeRef = useRef(0);
+  const lastSpaceTimeRef = useRef(0);
 
   // signBridge 16-frame temporal buffer (~12.5 FPS / 80ms per frame)
   const CLIP_LENGTH = 16;
@@ -167,80 +169,26 @@ export default function SignInputCard({
   /**
    * Finalize the signed thought using pure Uni-Sign (ICLR 2025) ST-GCN multi-frame sequence translation
    */
-  const processCompletedSigning = useCallback(async () => {
-    if (!videoRef.current || isAnalyzingRef.current) return;
+  const processCompletedSigning = useCallback(() => {
+    const pending = pendingSignRef.current || candidateGesture;
+    if (pending && (pending.isLetter || pending.isNumber)) {
+      onGestureDetected(pending);
+      const confirmObj = {
+        ...pending,
+        name: `Letter ${pending.letter || pending.digit || pending.text} Added!`
+      };
+      setConfirmedGesture(confirmObj);
+      setHoldProgress(100);
+      pendingSignRef.current = null;
+      setCandidateGesture(null);
 
-    const now = Date.now();
-    if (now - lastProcessedTimeRef.current < 1600) return; // Prevent double-triggering
-
-    isAnalyzingRef.current = true;
-    setMotionState('analyzing');
-
-    try {
-      const result = uniSignStreamProcessor.translateSequence(clipBufferRef.current, currentGesture, {
-        language: signLanguage,
-        mode: inputMode
-      });
-
-      if (result && result.detected && (result.text || result.signName)) {
-        lastProcessedTimeRef.current = Date.now();
-        const cleanText = (result.text || result.signName || '').trim();
-        const isLetter = result.type === 'letter' || (cleanText.length === 1 && /^[A-Z]$/i.test(cleanText));
-        const isNumber = result.type === 'number' || (cleanText.length === 1 && /^[0-9]$/.test(cleanText));
-        const isWord = !isLetter && !isNumber;
-
-        const signObj = {
-          id: (result.signName || cleanText).toLowerCase().replace(/\s+/g, '_'),
-          name: result.signName || (isLetter ? `Letter ${cleanText.toUpperCase()}` : cleanText),
-          type: isLetter ? 'letter' : (isNumber ? 'number' : 'word'),
-          text: isLetter ? cleanText.toUpperCase() : cleanText,
-          phrase: isLetter ? cleanText.toUpperCase() : cleanText,
-          isLetter: isLetter,
-          letter: isLetter ? cleanText.toUpperCase() : undefined,
-          isNumber: isNumber,
-          digit: isNumber ? cleanText : undefined,
-          isWord: isWord,
-          hindiPhrase: result.hindi || '',
-          confidence: result.confidence || 0.98,
-          source: 'Uni-Sign (ICLR 2025) ST-GCN Buffer'
-        };
-
-        setCurrentGesture(signObj);
-        setConfirmedGesture(signObj);
-        setHoldProgress(100);
-        setDetectionConfidence(Math.round(signObj.confidence * 100));
-        setLastSpokenPhrase(signObj.text);
-        onGestureDetected(signObj);
-
-        if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
-        confirmedTimeoutRef.current = setTimeout(() => {
-          setConfirmedGesture(null);
-          setHoldProgress(0);
-          setCandidateGesture(null);
-        }, 1500);
-      } else if (currentGesture) {
-        lastProcessedTimeRef.current = Date.now();
-        setConfirmedGesture(currentGesture);
-        setHoldProgress(100);
-        onGestureDetected(currentGesture);
-        setLastSpokenPhrase(currentGesture.text || currentGesture.phrase);
-
-        if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
-        confirmedTimeoutRef.current = setTimeout(() => {
-          setConfirmedGesture(null);
-          setHoldProgress(0);
-          setCandidateGesture(null);
-        }, 1500);
-      }
-    } catch (err) {
-      console.error('Uni-Sign ST-GCN translation error:', err);
-    } finally {
-      setTimeout(() => {
-        isAnalyzingRef.current = false;
-        setMotionState('idle');
-      }, 350);
+      if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
+      confirmedTimeoutRef.current = setTimeout(() => {
+        setConfirmedGesture(null);
+        setHoldProgress(0);
+      }, 1200);
     }
-  }, [signLanguage, inputMode, currentGesture, onGestureDetected]);
+  }, [candidateGesture, onGestureDetected]);
 
   /**
    * Helper to draw connections manually if drawing_utils CDN is delayed
@@ -399,124 +347,111 @@ export default function SignInputCard({
         isMovingRef.current = true;
         lastMotionTimeRef.current = now;
         setMotionState('moving');
-
-        // Cancel any pending pause completion while hands are actively moving
-        if (pauseTriggerTimeoutRef.current) {
-          clearTimeout(pauseTriggerTimeoutRef.current);
-          pauseTriggerTimeoutRef.current = null;
-        }
       } else {
-        // Hands are held steady or paused
-        if (isMovingRef.current && now - lastMotionTimeRef.current > 550) {
-          // Person paused to finish what they want to say
-          setMotionState('paused');
-
-          if (!pauseTriggerTimeoutRef.current && !isAnalyzingRef.current) {
-            pauseTriggerTimeoutRef.current = setTimeout(() => {
-              isMovingRef.current = false;
-              pauseTriggerTimeoutRef.current = null;
-              processCompletedSigning();
-            }, 300); // 300ms verification pause
-          }
-        } else if (inputMode === 'phrases' && !isMoving && !isAnalyzingRef.current) {
-          // In phrases mode: If hands are held steady and not in motion, let Uni-Sign ST-GCN interpret
-          if (now - lastMotionTimeRef.current > 850 && now - lastProcessedTimeRef.current > 2200) {
-            if (!pauseTriggerTimeoutRef.current && clipBufferRef.current.length >= 3) {
-              setMotionState('paused');
-              pauseTriggerTimeoutRef.current = setTimeout(() => {
-                pauseTriggerTimeoutRef.current = null;
-                processCompletedSigning();
-              }, 250);
-            }
-          }
-        }
+        isMovingRef.current = false;
+        setMotionState('idle');
       }
 
-      // Run local classifier using both Hands and Pose anchors
-      const detected = classifyHands(results.multiHandLandmarks, poseLandmarksRef.current, signLanguage, inputMode);
       const nowMs = Date.now();
-      // Hold duration: give user ample time to form & hold sign so system understands before implementing
-      const holdDuration = inputMode === 'alphabet' ? 850 : (inputMode === 'numbers' ? 900 : 1100);
+
+      // Case 1: Two Hands visible in camera -> gives space between words to make sentence!
+      if (handCount >= 2) {
+        if (nowMs - lastSpaceTimeRef.current > 1100) {
+          lastSpaceTimeRef.current = nowMs;
+          onFingerspellSpace();
+          const spaceSign = {
+            id: 'two_hands_space',
+            name: 'Space (🙌 Two Hands)',
+            text: ' ',
+            phrase: 'Space',
+            isSpace: true,
+            handsUsed: 2
+          };
+          setCurrentGesture(spaceSign);
+          setConfirmedGesture(spaceSign);
+          setHoldProgress(100);
+          pendingSignRef.current = null;
+          setCandidateGesture(null);
+
+          if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
+          confirmedTimeoutRef.current = setTimeout(() => {
+            setConfirmedGesture(null);
+            setHoldProgress(0);
+          }, 1200);
+        }
+        return;
+      }
+
+      // Case 2: Single Hand -> Classify Alphabet, Number, or High-Five (Separator)
+      const detected = classifyHands(results.multiHandLandmarks, poseLandmarksRef.current, signLanguage, inputMode);
 
       if (detected) {
         setCurrentGesture(detected);
         setDetectionConfidence(Math.round(detected.confidence * 100));
 
-        const cand = candidateRef.current;
-        if (cand.name === detected.name) {
-          // Sustaining the exact same sign
-          cand.lastSeenTime = nowMs;
-          cand.consecutiveFrames += 1;
-          cand.jitterFrames = 0;
-          cand.sign = detected;
+        // Subcase 2A: High-Five gesture (🖐️ whole open hand with 5 fingers) -> Separates and commits letter
+        if (detected.isHighFive) {
+          if (nowMs - lastHighFiveTimeRef.current > 750) {
+            lastHighFiveTimeRef.current = nowMs;
 
-          const elapsed = nowMs - cand.startTime;
-          const progress = Math.min(100, Math.round((elapsed / holdDuration) * 100));
-          setHoldProgress(progress);
-          setCandidateGesture(detected);
-
-          // Once held steady for required hold time with solid consecutive frame agreement
-          if (progress >= 100 && cand.consecutiveFrames >= 4) {
-            const timeSinceLastEmit = nowMs - lastEmittedTimeRef.current;
-            const isSameAsLast = lastEmittedSignRef.current === detected.name;
-
-            // Enforce cooldown before repeating identical sign, or emit immediately if it's a new sign
-            if (!isSameAsLast || timeSinceLastEmit > 1600) {
-              lastEmittedSignRef.current = detected.name;
-              lastEmittedTimeRef.current = nowMs;
-
-              setConfirmedGesture(detected);
-              setHoldProgress(100);
-
-              // Deliver confirmed sign to output
-              onGestureDetected(detected);
-
-              // Reset candidate tracker for next sign
-              candidateRef.current = {
-                name: null,
-                sign: null,
-                startTime: 0,
-                lastSeenTime: 0,
-                consecutiveFrames: 0,
-                jitterFrames: 0
+            const pending = pendingSignRef.current;
+            if (pending && (pending.isLetter || pending.isNumber)) {
+              onGestureDetected(pending);
+              const confirmSign = {
+                ...pending,
+                name: `✓ Letter ${pending.letter || pending.digit || pending.text} Added!`
               };
+              setConfirmedGesture(confirmSign);
+              setHoldProgress(100);
+              pendingSignRef.current = null;
+              setCandidateGesture(null);
 
               if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
               confirmedTimeoutRef.current = setTimeout(() => {
                 setConfirmedGesture(null);
                 setHoldProgress(0);
-                setCandidateGesture(null);
-              }, 750);
+              }, 1200);
+            } else {
+              setCandidateGesture({
+                name: '🖐️ High-Five Separator',
+                phrase: 'Show a letter first, then High-Five to add it'
+              });
+              setHoldProgress(100);
             }
           }
-        } else {
-          // Different candidate gesture
-          // If previous candidate had multiple frames, tolerate a 1-frame jitter before switching
-          if (cand.name && nowMs - cand.lastSeenTime < 180 && cand.consecutiveFrames >= 3) {
-            cand.jitterFrames = (cand.jitterFrames || 0) + 1;
-            if (cand.jitterFrames <= 2) {
-              // Maintain current candidate during momentary transition noise
-              return;
-            }
-          }
+        } else if (detected.isLetter || detected.isNumber) {
+          // Subcase 2B: Letter or Number handshape formed
+          const cand = candidateRef.current;
+          if (cand.name === detected.name) {
+            cand.lastSeenTime = nowMs;
+            cand.consecutiveFrames += 1;
+            cand.sign = detected;
 
-          // Start observing the newly formed sign
-          candidateRef.current = {
-            name: detected.name,
-            sign: detected,
-            startTime: nowMs,
-            lastSeenTime: nowMs,
-            consecutiveFrames: 1,
-            jitterFrames: 0
-          };
-          setCandidateGesture(detected);
-          setHoldProgress(10);
+            const elapsed = nowMs - cand.startTime;
+            // Responsive 280ms steady hold locks the letter into pending ready state
+            const progress = Math.min(100, Math.round((elapsed / 280) * 100));
+            setHoldProgress(progress);
+            setCandidateGesture(detected);
+
+            if (progress >= 100 && cand.consecutiveFrames >= 3) {
+              pendingSignRef.current = detected;
+            }
+          } else {
+            candidateRef.current = {
+              name: detected.name,
+              sign: detected,
+              startTime: nowMs,
+              lastSeenTime: nowMs,
+              consecutiveFrames: 1,
+              jitterFrames: 0
+            };
+            setCandidateGesture(detected);
+            setHoldProgress(25);
+          }
         }
       } else {
-        // No valid gesture in this frame
         const cand = candidateRef.current;
-        if (cand.name && nowMs - cand.lastSeenTime > 320) {
-          // User relaxed or dropped hand
+        if (cand.name && nowMs - cand.lastSeenTime > 450) {
           candidateRef.current = {
             name: null,
             sign: null,
@@ -716,11 +651,6 @@ export default function SignInputCard({
     onGestureDetected(signObj);
   };
 
-  const categories = ['All', 'Greetings', 'Family', 'Responses', 'Questions', 'Emergency', 'Daily Needs', 'Emotions', 'Actions', 'Time'];
-  const filteredVocabulary = selectedCategory === 'All'
-    ? FULL_SIGN_VOCABULARY
-    : FULL_SIGN_VOCABULARY.filter(item => item.category === selectedCategory);
-
   return (
     <div style={{
       backgroundColor: 'var(--bg-card)',
@@ -747,75 +677,22 @@ export default function SignInputCard({
             Sign input
           </span>
 
-          {/* Mode Switcher Tabs */}
+          {/* A-Z Fingerspelling Indicator */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: 'var(--bg-card-subtle)',
+            gap: '6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '999px',
-            padding: '3px',
+            padding: '4px 12px',
             border: '1px solid var(--border-subtle)',
-            marginLeft: '12px'
+            marginLeft: '12px',
+            color: 'var(--text-secondary)',
+            fontSize: '11px',
+            fontWeight: 500
           }}>
-            <button
-              onClick={() => setInputMode('phrases')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 12px',
-                borderRadius: '999px',
-                border: 'none',
-                backgroundColor: inputMode === 'phrases' ? '#ffffff' : 'transparent',
-                color: inputMode === 'phrases' ? '#000000' : 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <MessageSquare size={12} />
-              <span>Phrases & Sentences</span>
-            </button>
-
-            <button
-              onClick={() => setInputMode('alphabet')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 12px',
-                borderRadius: '999px',
-                border: 'none',
-                backgroundColor: inputMode === 'alphabet' ? '#ffffff' : 'transparent',
-                color: inputMode === 'alphabet' ? '#000000' : 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Type size={12} />
-              <span>A–Z Alphabet</span>
-            </button>
-
-            <button
-              onClick={() => setInputMode('numbers')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 12px',
-                borderRadius: '999px',
-                border: 'none',
-                backgroundColor: inputMode === 'numbers' ? '#ffffff' : 'transparent',
-                color: inputMode === 'numbers' ? '#000000' : 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Hash size={12} />
-              <span>Numbers (0–10)</span>
-            </button>
+            <Type size={12} color="var(--accent-cyan)" />
+            <span>A–Z Alphabet Fingerspelling</span>
           </div>
         </div>
 
@@ -1221,7 +1098,7 @@ export default function SignInputCard({
         )}
 
         {/* Central Recognition & Hold-to-Confirm Visual HUD */}
-        {cameraActive && (candidateGesture || confirmedGesture || motionState === 'analyzing') && (
+        {cameraActive && (candidateGesture || confirmedGesture) && (
           <div style={{
             position: 'absolute',
             bottom: '54px',
@@ -1234,23 +1111,23 @@ export default function SignInputCard({
             gap: '8px',
             backgroundColor: confirmedGesture 
               ? 'rgba(16, 185, 129, 0.95)' 
-              : (motionState === 'analyzing' ? 'rgba(6, 182, 212, 0.92)' : 'rgba(12, 13, 16, 0.88)'),
+              : 'rgba(12, 13, 16, 0.92)',
             backdropFilter: 'blur(16px)',
-            border: `1.5px solid ${confirmedGesture ? '#10b981' : (motionState === 'analyzing' ? '#06b6d4' : 'rgba(6, 182, 212, 0.5)')}`,
+            border: `1.5px solid ${confirmedGesture ? '#10b981' : 'rgba(6, 182, 212, 0.5)'}`,
             boxShadow: confirmedGesture 
               ? '0 8px 32px rgba(16, 185, 129, 0.5)' 
-              : (motionState === 'analyzing' ? '0 8px 32px rgba(6, 182, 212, 0.5)' : '0 8px 30px rgba(0, 0, 0, 0.8)'),
+              : '0 8px 30px rgba(0, 0, 0, 0.8)',
             borderRadius: '16px',
             padding: '12px 22px',
             minWidth: '280px',
-            maxWidth: '420px',
+            maxWidth: '440px',
             transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
-            {motionState === 'analyzing' ? (
+            {confirmedGesture ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-                <Sparkles size={18} color="#ffffff" className="animate-spin" />
-                <span style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>
-                  Uni-Sign AI: Accurately Recognizing Sign...
+                <CheckCircle2 size={22} color="#ffffff" />
+                <span style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>
+                  {confirmedGesture.name}
                 </span>
               </div>
             ) : (
@@ -1259,67 +1136,59 @@ export default function SignInputCard({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      color: confirmedGesture ? '#ffffff' : 'var(--accent-cyan)',
+                      fontSize: '22px',
+                      fontWeight: 800,
+                      color: 'var(--accent-cyan)',
                       letterSpacing: '0.04em'
                     }}>
-                      {confirmedGesture ? `✓ ${confirmedGesture.name}` : candidateGesture?.name}
+                      {candidateGesture.letter || candidateGesture.digit || candidateGesture.name}
                     </span>
-                    {candidateGesture?.phrase && !confirmedGesture && (
-                      <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
-                        "{candidateGesture.phrase}"
-                      </span>
-                    )}
+                    <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.75)', fontWeight: 500 }}>
+                      {candidateGesture.name}
+                    </span>
                   </div>
 
                   <span style={{
                     fontSize: '11px',
                     fontWeight: 700,
                     fontFamily: 'var(--font-mono)',
-                    color: confirmedGesture ? '#ffffff' : (holdProgress > 70 ? '#10b981' : 'var(--accent-cyan)'),
-                    backgroundColor: confirmedGesture ? 'rgba(0,0,0,0.2)' : 'rgba(255, 255, 255, 0.08)',
+                    color: holdProgress >= 100 ? '#10b981' : 'var(--accent-cyan)',
+                    backgroundColor: holdProgress >= 100 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.08)',
                     padding: '2px 8px',
                     borderRadius: '999px'
                   }}>
-                    {confirmedGesture ? 'CONFIRMED' : `${holdProgress}%`}
+                    {holdProgress >= 100 ? 'READY' : `${holdProgress}%`}
                   </span>
                 </div>
 
-                {/* Hold-to-Confirm Animated Progress Bar */}
-                {!confirmedGesture && (
-                  <div style={{
-                    width: '100%',
-                    height: '7px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    borderRadius: '999px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      width: `${holdProgress}%`,
-                      height: '100%',
-                      borderRadius: '999px',
-                      backgroundColor: holdProgress > 80 ? '#10b981' : '#06b6d4',
-                      boxShadow: `0 0 10px ${holdProgress > 80 ? '#10b981' : '#06b6d4'}`,
-                      transition: 'width 0.08s linear'
-                    }} />
-                  </div>
-                )}
-
-                {/* Instruction / Status Text */}
+                {/* Hold Progress Bar */}
                 <div style={{
-                  fontSize: '11px',
-                  color: confirmedGesture ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 500,
+                  width: '100%',
+                  height: '6px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  borderRadius: '999px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${holdProgress}%`,
+                    height: '100%',
+                    borderRadius: '999px',
+                    backgroundColor: holdProgress >= 100 ? '#10b981' : '#06b6d4',
+                    boxShadow: `0 0 10px ${holdProgress >= 100 ? '#10b981' : '#06b6d4'}`,
+                    transition: 'width 0.08s linear'
+                  }} />
+                </div>
+
+                {/* Instruction */}
+                <div style={{
+                  fontSize: '12px',
+                  color: holdProgress >= 100 ? '#10b981' : 'var(--text-secondary)',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
                 }}>
-                  {confirmedGesture ? (
-                    <span>Confirmed & added to detected text</span>
-                  ) : (
-                    <span>Hold steady to recognize sign ({holdProgress}%)</span>
-                  )}
+                  <span>🖐️ Show High-Five (open hand) to separate & add to word</span>
                 </div>
               </>
             )}
@@ -1336,10 +1205,10 @@ export default function SignInputCard({
           color: 'var(--text-muted)',
           zIndex: 10
         }}>
-          FACE + BOTH HANDS IN FRAME (PAUSE WHEN FINISHED SIGNING)
+          🖐️ SHOW HIGH-FIVE (OPEN HAND) TO COMMIT LETTER • 🙌 SHOW TWO HANDS TO ADD WORD SPACE
         </div>
 
-        {/* Manual Instant Translate Trigger & Second Person Switch */}
+        {/* Manual Instant Trigger & Action Buttons */}
         <div style={{
           position: 'absolute',
           bottom: '16px',
@@ -1353,28 +1222,57 @@ export default function SignInputCard({
             <>
               <button
                 onClick={processCompletedSigning}
-                disabled={motionState === 'analyzing'}
-                title="Click anytime to have Uni-Sign (ICLR 2025) ST-GCN accurately recognize whether this is a letter or a word sign"
+                title="Commit current letter (same as showing High-Five 🖐️)"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 15px',
-                  borderRadius: '8px',
-                  backgroundColor: '#06b6d4',
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  backgroundColor: '#ffffff',
                   border: 'none',
+                  color: '#07080a',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 15px rgba(255, 255, 255, 0.25)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = '#e2e8f0';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <Hand size={14} color="#07080a" />
+                <span>Separate Letter (🖐️)</span>
+              </button>
+
+              <button
+                onClick={onFingerspellSpace}
+                title="Insert space between words (same as showing Two Hands 🙌)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
                   color: '#ffffff',
                   fontSize: '12px',
                   fontWeight: 600,
-                  cursor: motionState === 'analyzing' ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 15px rgba(6, 182, 212, 0.45)',
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0891b2'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#06b6d4'}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.16)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
               >
-                <Sparkles size={14} color="#ffffff" className={motionState === 'analyzing' ? 'animate-spin' : ''} />
-                <span>{motionState === 'analyzing' ? 'Translating...' : 'Translate Sign (Uni-Sign AI)'}</span>
+                <Space size={14} color="#ffffff" />
+                <span>Space (🙌)</span>
               </button>
 
               <button
@@ -1422,122 +1320,105 @@ export default function SignInputCard({
         </div>
       </div>
 
-      {/* Vocabulary Toolbar */}
-      {inputMode === 'alphabet' ? (
-        <div style={{
-          padding: '12px 18px',
-          backgroundColor: 'var(--bg-card-subtle)',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-cyan)', letterSpacing: '0.06em' }}>
-              COMPLETE A–Z FINGERSPELLING:
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                onClick={onFingerspellSpace}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '11px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Space size={12} />
-                <span>Space</span>
-              </button>
-              <button
-                onClick={onFingerspellBackspace}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '11px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Delete size={12} />
-                <span>Backspace</span>
-              </button>
-            </div>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            overflowX: 'auto',
-            paddingBottom: '4px'
-          }}>
-            {ALPHABET_A_TO_Z.map(item => (
-              <button
-                key={item.id}
-                onClick={() => handleSimulateGesture(item)}
-                title={item.description}
-                style={{
-                  minWidth: '32px',
-                  height: '32px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-primary)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  fontFamily: 'var(--font-mono)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = 'var(--accent-cyan)';
-                  e.currentTarget.style.color = '#000000';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-              >
-                {item.letter}
-              </button>
-            ))}
+      {/* Complete A–Z Fingerspelling Toolbar */}
+      <div style={{
+        padding: '12px 18px',
+        backgroundColor: 'var(--bg-card-subtle)',
+        borderBottom: '1px solid var(--border-subtle)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-cyan)', letterSpacing: '0.06em' }}>
+            COMPLETE A–Z FINGERSPELLING:
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={processCompletedSigning}
+              title="Commit / separate the current letter into the word (same as showing High-Five 🖐️)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 14px',
+                borderRadius: '999px',
+                backgroundColor: '#ffffff',
+                border: 'none',
+                color: '#07080a',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(255, 255, 255, 0.25)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ffffff'}
+            >
+              <Hand size={12} color="#07080a" />
+              <span>Separate (🖐️)</span>
+            </button>
+            <button
+              onClick={onFingerspellSpace}
+              title="Add word space (same as showing Two Hands 🙌)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
+            >
+              <Space size={12} />
+              <span>Space (🙌)</span>
+            </button>
+            <button
+              onClick={onFingerspellBackspace}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 12px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+            >
+              <Delete size={12} />
+              <span>Backspace</span>
+            </button>
           </div>
         </div>
-      ) : inputMode === 'numbers' ? (
+
         <div style={{
-          padding: '12px 18px',
-          backgroundColor: 'var(--bg-card-subtle)',
-          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          overflowX: 'auto'
+          gap: '6px',
+          overflowX: 'auto',
+          paddingBottom: '4px'
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-cyan)', letterSpacing: '0.06em' }}>
-            NUMBERS (0–10):
-          </span>
-          {NUMBERS_0_TO_10.map(num => (
+          {ALPHABET_A_TO_Z.map(item => (
             <button
-              key={num.id}
-              onClick={() => handleSimulateGesture(num)}
-              title={num.description}
+              key={item.id}
+              onClick={() => handleSimulateGesture(item)}
+              title={item.description}
               style={{
-                minWidth: '36px',
+                minWidth: '32px',
                 height: '32px',
                 borderRadius: '6px',
                 backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -1550,10 +1431,10 @@ export default function SignInputCard({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all 0.15s'
+                transition: 'all 0.15s ease'
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = 'var(--accent-green)';
+                e.currentTarget.style.backgroundColor = 'var(--accent-cyan)';
                 e.currentTarget.style.color = '#000000';
               }}
               onMouseLeave={e => {
@@ -1561,88 +1442,11 @@ export default function SignInputCard({
                 e.currentTarget.style.color = 'var(--text-primary)';
               }}
             >
-              {num.digit}
+              {item.letter}
             </button>
           ))}
         </div>
-      ) : (
-        <div style={{
-          padding: '10px 18px',
-          backgroundColor: 'var(--bg-card-subtle)',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            overflowX: 'auto',
-            paddingBottom: '2px'
-          }}>
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  padding: '3px 9px',
-                  borderRadius: '999px',
-                  border: 'none',
-                  backgroundColor: selectedCategory === cat ? '#ffffff' : 'rgba(255, 255, 255, 0.04)',
-                  color: selectedCategory === cat ? '#000000' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: selectedCategory === cat ? 600 : 400,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            overflowX: 'auto',
-            whiteSpace: 'nowrap',
-            paddingBottom: '4px'
-          }}>
-            {filteredVocabulary.map(sign => (
-              <button
-                key={sign.id}
-                onClick={() => handleSimulateGesture(sign)}
-                title={sign.description}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '999px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: '12px',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                }}
-              >
-                <span>{sign.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Card Footer */}
       <div style={{

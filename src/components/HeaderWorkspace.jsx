@@ -12,27 +12,27 @@ export default function HeaderWorkspace({ isSessionActive, sessionTime }) {
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
-      marginBottom: '28px',
+      marginBottom: '24px',
       flexWrap: 'wrap',
       gap: '16px'
     }}>
       <div>
         <h1 style={{
-          fontSize: '32px',
+          fontSize: '30px',
           fontWeight: 500,
-          letterSpacing: '-0.02em',
+          letterSpacing: '-0.03em',
           color: 'var(--text-primary)',
           lineHeight: 1.2,
           marginBottom: '6px'
         }}>
-          Uni-Sign Workspace
+          Translation Workspace
         </h1>
         <p style={{
           fontSize: '14px',
           color: 'var(--text-secondary)',
           fontWeight: 400
         }}>
-          Continuous Multimodal Sign Language Understanding & Neural Speech (ICLR 2025)
+          Real-time sign language fingerspelling & natural speech synthesis
         </p>
       </div>
 
@@ -43,8 +43,8 @@ export default function HeaderWorkspace({ isSessionActive, sessionTime }) {
         gap: '8px',
         padding: '6px 14px',
         borderRadius: '999px',
-        backgroundColor: isSessionActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 255, 255, 0.04)',
-        border: `1px solid ${isSessionActive ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
+        backgroundColor: isSessionActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+        border: isSessionActive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-subtle)',
         fontSize: '13px',
         fontFamily: 'var(--font-mono)',
         color: isSessionActive ? '#34d399' : 'var(--text-secondary)'
@@ -56,8 +56,8 @@ export default function HeaderWorkspace({ isSessionActive, sessionTime }) {
           backgroundColor: isSessionActive ? 'var(--accent-green)' : 'var(--text-muted)',
           boxShadow: isSessionActive ? '0 0 8px var(--accent-green)' : 'none'
         }} />
-        <span>{isSessionActive ? 'Session Active' : 'Not started'}</span>
-        <span style={{ color: 'var(--border-strong)', margin: '0 2px' }}>|</span>
+        <span>{isSessionActive ? 'Session Active' : 'Ready'}</span>
+        <span style={{ color: 'var(--border-strong)', margin: '0 2px' }}>•</span>
         <span>{formatTime(sessionTime)}</span>
       </div>
     </div>

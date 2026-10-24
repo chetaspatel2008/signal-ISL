@@ -1,34 +1,34 @@
 :root {
-  --bg-main: #090a0d;
-  --bg-card: #111216;
-  --bg-card-subtle: #16181e;
-  --bg-hover: #1c1e26;
-  --bg-active: #242731;
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --border-focus: rgba(255, 255, 255, 0.35);
+  --bg-main: #07080a;
+  --bg-card: #0e1015;
+  --bg-card-subtle: #12141a;
+  --bg-hover: #181b22;
+  --bg-active: #222632;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus: rgba(255, 255, 255, 0.4);
 
-  --text-primary: #f4f5f7;
-  --text-secondary: #8e93a0;
-  --text-muted: #575c68;
-  --text-inverse: #0b0c0f;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #07080a;
 
   --accent-green: #10b981;
-  --accent-blue: #3b82f6;
-  --accent-cyan: #06b6d4;
-  --accent-amber: #f59e0b;
-  --accent-red: #ef4444;
+  --accent-blue: #38bdf8;
+  --accent-cyan: #22d3ee;
+  --accent-amber: #fbbf24;
+  --accent-red: #f87171;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
 
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 25px rgba(255, 255, 255, 0.06);
+  --shadow-card: 0 16px 48px -4px rgba(0, 0, 0, 0.7), 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 35px rgba(255, 255, 255, 0.04);
 }
 
 * {

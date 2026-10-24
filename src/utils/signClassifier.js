@@ -392,292 +392,75 @@ export function classifyNumber(landmarks) {
   return null;
 }
 
-// Master Classifier: Detects whole vocabulary (Father, Mother, Brother, Sister, Help, Doctor, etc.)
-// Utilizes both Hand landmarks and Pose body anchors (Head, Forehead, Chin, Chest, Wrist) like signBridge
-export function classifyHands(handsLandmarks, poseLandmarks = null, language = 'ISL', mode = 'phrases') {
+// High-Five Gesture: Whole open hand with all 5 fingers extended and upright (Letter Separator)
+export function classifyHighFive(landmarks) {
+  if (!landmarks || landmarks.length < 21) return null;
+  const d = analyzeFingerDetails(landmarks);
+  const h = landmarks;
+
+  // All 5 fingers extended (thumb, index, middle, ring, pinky)
+  const allFiveExtended = d.thumb.extended && d.index.extended && d.middle.extended && d.ring.extended && d.pinky.extended;
+
+  if (allFiveExtended && d.isUpright) {
+    const spreadIndexMiddle = distance(h[8], h[12]);
+    const spreadThumbIndex = distance(h[4], h[8]);
+
+    // Ensure thumb is out and fingers are spread naturally like a high five (not tucked like B)
+    if (spreadThumbIndex > 0.08 || spreadIndexMiddle > 0.035) {
+      return {
+        id: 'high_five',
+        name: 'High-Five (🖐️ Separate Letter)',
+        type: 'high_five',
+        phrase: 'High-Five',
+        isHighFive: true,
+        confidence: 0.99
+      };
+    }
+  }
+  return null;
+}
+
+// Two Hands Gesture: Both hands visible in camera -> gives space between words to make sentence
+export function classifyTwoHandsSpace(handsLandmarks) {
+  if (!handsLandmarks || handsLandmarks.length < 2) return null;
+  const h1 = handsLandmarks[0];
+  const h2 = handsLandmarks[1];
+  if (!h1 || !h2 || h1.length < 21 || h2.length < 21) return null;
+
+  return {
+    id: 'two_hands_space',
+    name: 'Space (🙌 Two Hands)',
+    type: 'space',
+    text: ' ',
+    phrase: 'Space',
+    isSpace: true,
+    confidence: 0.99,
+    handsUsed: 2
+  };
+}
+
+// Master Classifier: Exclusively recognizes Alphabets (A-Z) and Numbers (0-10)
+// High-Five separates/commits each letter, Two Hands gives space between words to make sentences.
+// STRICT RULE: No word guessing!
+export function classifyHands(handsLandmarks, poseLandmarks = null, language = 'ISL', mode = 'alphabet') {
   if (!handsLandmarks || handsLandmarks.length === 0) {
     return null;
   }
 
-  const handCount = handsLandmarks.length;
+  // 1. Two Hands: Inserts space between words
+  if (handsLandmarks.length >= 2) {
+    return classifyTwoHandsSpace(handsLandmarks);
+  }
+
   const h1 = handsLandmarks[0];
 
-  // In dedicated alphabet mode, ONLY check alphabet
-  if (mode === 'alphabet') {
-    return classifyAlphabet(h1);
+  // 2. High-Five on single hand: Whole open hand with 5 fingers -> Separates letter
+  const highFiveMatch = classifyHighFive(h1);
+  if (highFiveMatch) {
+    return highFiveMatch;
   }
 
-  // In dedicated numbers mode, ONLY check numbers
-  if (mode === 'numbers') {
-    return classifyNumber(h1);
-  }
-
-  // ========================================
-  // PHRASES MODE: Multi-layer detection
-  // Priority: Two-hand signs → Body-anchored signs → Alphabet → Numbers → Generic phrases
-  // ========================================
-
-  const d1 = analyzeFingerDetails(h1);
-
-  // Extract anatomical body anchors if Pose landmarks are available (signBridge technique)
-  let foreheadAnchor = null;
-  let chinAnchor = null;
-  let chestAnchor = null;
-
-  if (poseLandmarks && poseLandmarks.length >= 13) {
-    const nose = poseLandmarks[0];
-    const leftEye = poseLandmarks[2] || nose;
-    const rightEye = poseLandmarks[5] || nose;
-    const eyeSpan = Math.max(0.04, Math.abs(leftEye.x - rightEye.x));
-    
-    foreheadAnchor = {
-      x: (leftEye.x + rightEye.x) / 2,
-      y: nose.y - eyeSpan * 1.5
-    };
-
-    const leftMouth = poseLandmarks[9];
-    const rightMouth = poseLandmarks[10];
-    chinAnchor = {
-      x: nose.x,
-      y: (leftMouth && rightMouth) ? Math.max(leftMouth.y, rightMouth.y) + 0.04 : nose.y + 0.12
-    };
-
-    const leftShoulder = poseLandmarks[11];
-    const rightShoulder = poseLandmarks[12];
-    chestAnchor = {
-      x: (leftShoulder.x + rightShoulder.x) / 2,
-      y: (leftShoulder.y + rightShoulder.y) / 2 + 0.05
-    };
-  }
-
-  // Count open fingers on dominant hand
-  const extCount = [d1.thumb.extended, d1.index.extended, d1.middle.extended, d1.ring.extended, d1.pinky.extended].filter(Boolean).length;
-
-  // ==========================================
-  // LAYER 1: TWO-HAND SIGNS (unambiguous, require both hands)
-  // ==========================================
-  if (handCount >= 2) {
-    const h2 = handsLandmarks[1];
-    const d2 = analyzeFingerDetails(h2);
-
-    const wristDist = distance(h1[0], h2[0]);
-    const palmDist = distance(h1[9], h2[9]);
-    const indexTipDist = distance(h1[8], h2[8]);
-    const thumbTipDist = distance(h1[4], h2[4]);
-
-    // 1. Namaste / Anjali Mudra (ISL Top Sign):
-    if (palmDist < 0.35 || (wristDist < 0.42 && indexTipDist < 0.28)) {
-      return {
-        id: 'namaste',
-        name: 'Namaste (नमस्ते)',
-        text: 'Namaste',
-        phrase: 'Namaste',
-        hindiPhrase: 'नमस्ते!',
-        confidence: 0.99,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-
-    // 2. Help / Madad: Fist resting on flat palm
-    const h1Flat = d1.index.extended && d1.middle.extended;
-    const h2Fist = d2.index.curled && d2.middle.curled;
-    const h2Flat = d2.index.extended && d2.middle.extended;
-    const h1Fist = d1.index.curled && d1.middle.curled;
-
-    if ((h1Flat && h2Fist && wristDist < 0.38) || (h2Flat && h1Fist && wristDist < 0.38)) {
-      return {
-        id: 'madad',
-        name: 'Madad (मदद / Help)',
-        text: 'Help',
-        phrase: 'Help',
-        hindiPhrase: 'मदद!',
-        confidence: 0.97,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-
-    // 3. Doctor: Pulse tap on inner wrist
-    const wristTouchDist1 = distance(h1[8], h2[0]);
-    const wristTouchDist2 = distance(h2[8], h1[0]);
-    if (wristTouchDist1 < 0.22 || wristTouchDist2 < 0.22) {
-      return {
-        id: 'doctor',
-        name: 'Doctor (डॉक्टर)',
-        text: 'Doctor',
-        phrase: 'Doctor',
-        hindiPhrase: 'डॉक्टर!',
-        confidence: 0.96,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-
-    // 4. Swagatam / Welcome: Dual open hands sweeping inward
-    if (extCount >= 3 && [d2.thumb.extended, d2.index.extended, d2.middle.extended].filter(Boolean).length >= 2 &&
-        palmDist < 0.55 && wristDist > 0.15) {
-      return {
-        id: 'swagatam',
-        name: 'Swagatam (स्वागतम / Welcome)',
-        text: 'Welcome',
-        phrase: 'Welcome',
-        hindiPhrase: 'स्वागतम!',
-        confidence: 0.96,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-
-    // 5. Friend / Dost: Hooked index fingers
-    if (indexTipDist < 0.14 && thumbTipDist < 0.18) {
-      return {
-        id: 'dost',
-        name: 'Dost (दोस्त / Friend)',
-        text: 'Friend',
-        phrase: 'Friend',
-        hindiPhrase: 'दोस्त!',
-        confidence: 0.94,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-
-    // 6. Family / Parivar: Hands circling together
-    if (wristDist < 0.32 && indexTipDist < 0.24) {
-      return {
-        id: 'parivar',
-        name: 'Parivar (परिवार / Family)',
-        text: 'Family',
-        phrase: 'Family',
-        hindiPhrase: 'परिवार!',
-        confidence: 0.93,
-        isWord: true,
-        handsUsed: 2
-      };
-    }
-  }
-
-  // ==========================================
-  // LAYER 2: BODY-ANCHORED SIGNS (require Pose, unambiguous)
-  // These signs are only matched when Pose confirms the hand is near head/chin
-  // ==========================================
-  const thumbTip = h1[4];
-  const indexTip = h1[8];
-  const middleTip = h1[12];
-  const palmCenter = h1[9];
-  const wrist = h1[0];
-  const thumbIndexDist = distance(thumbTip, indexTip);
-
-  // Only do body-anchored checks when Pose is available
-  if (foreheadAnchor && chinAnchor) {
-    // Father: Hand touching forehead/temple — STRICT: require pose + hand actually near forehead
-    const handNearForehead = distance(palmCenter, foreheadAnchor) < 0.18 ||
-                             distance(thumbTip, foreheadAnchor) < 0.18;
-    if (handNearForehead && extCount >= 2) {
-      return {
-        id: 'pitaji',
-        name: 'Father (पिताजी)',
-        text: 'Father',
-        phrase: 'Father',
-        hindiPhrase: 'पिताजी!',
-        confidence: 0.98,
-        isWord: true,
-        handsUsed: 1,
-        anchor: 'Forehead'
-      };
-    }
-
-    // Mother: Hand touching chin/jaw — STRICT
-    const handNearChin = !handNearForehead && (
-      distance(palmCenter, chinAnchor) < 0.18 ||
-      distance(thumbTip, chinAnchor) < 0.18
-    );
-    if (handNearChin && extCount >= 2) {
-      return {
-        id: 'mataji',
-        name: 'Mother (माँ)',
-        text: 'Mother',
-        phrase: 'Mother',
-        hindiPhrase: 'माँ!',
-        confidence: 0.98,
-        isWord: true,
-        handsUsed: 1,
-        anchor: 'Chin'
-      };
-    }
-
-    // Food / Eat: Fingers grouped near mouth/chin
-    if (distance(thumbTip, chinAnchor) < 0.16 && distance(indexTip, thumbTip) < 0.10) {
-      return {
-        id: 'khana',
-        name: 'Khana (खाना / Food)',
-        text: 'Food',
-        phrase: 'Food',
-        hindiPhrase: 'खाना!',
-        confidence: 0.95,
-        isWord: true,
-        handsUsed: 1,
-        anchor: 'Mouth'
-      };
-    }
-
-    // Thank You: Flat hand moving forward from chin
-    if (distance(thumbTip, chinAnchor) < 0.20 && extCount >= 3) {
-      return {
-        id: 'dhanyavaad',
-        name: 'Dhanyavaad (धन्यवाद / Thank You)',
-        text: 'Thank You',
-        phrase: 'Thank You',
-        hindiPhrase: 'धन्यवाद!',
-        confidence: 0.95,
-        isWord: true,
-        handsUsed: 1,
-        anchor: 'Chin'
-      };
-    }
-  }
-
-  // ==========================================
-  // LAYER 3: DISTINCTIVE ONE-HAND WORD SIGNS
-  // Only unambiguous signs that don't collide with fingerspelling alphabet!
-  // ==========================================
-
-  // 1. Good / Thumbs Up (बहुत बढ़िया)
-  const isThumbUpright = h1[4].y < h1[2].y - 0.05;
-  if (isThumbUpright && d1.index.curled && d1.middle.curled && d1.ring.curled && d1.pinky.curled) {
-    return {
-      id: 'good',
-      name: 'Good / Thumbs Up (बहुत बढ़िया)',
-      text: 'Good',
-      phrase: 'Good',
-      hindiPhrase: 'बहुत बढ़िया!',
-      confidence: 0.98,
-      isWord: true,
-      handsUsed: 1
-    };
-  }
-
-  // 2. I Love You (Universal ISL/ASL mudra: Thumb + Index + Pinky)
-  if (d1.thumb.extended && d1.index.extended && d1.pinky.extended &&
-      d1.middle.curled && d1.ring.curled) {
-    return {
-      id: 'pyaar',
-      name: 'I Love You (प्यार)',
-      text: 'I Love You',
-      phrase: 'I Love You',
-      hindiPhrase: 'प्यार!',
-      confidence: 0.98,
-      isWord: true,
-      handsUsed: 1
-    };
-  }
-
-  // ==========================================
-  // LAYER 4: ACCURATE ALPHABET FINGERSPELLING (A - Z)
-  // CRITICAL RULE: If the user is showing a letter handshape, accurately return the LETTER!
-  // Do NOT guess words or sentences from letters!
-  // ==========================================
+  // 3. Alphabet Fingerspelling (A - Z strictly)
   const alphabetMatch = classifyAlphabet(h1);
   if (alphabetMatch) {
     return {
@@ -685,20 +468,6 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       text: alphabetMatch.letter,
       phrase: alphabetMatch.letter,
       isLetter: true,
-      isWord: false
-    };
-  }
-
-  // ==========================================
-  // LAYER 5: NUMBERS (0 - 10)
-  // ==========================================
-  const numberMatch = classifyNumber(h1);
-  if (numberMatch) {
-    return {
-      ...numberMatch,
-      text: numberMatch.digit,
-      phrase: numberMatch.digit,
-      isNumber: true,
       isWord: false
     };
   }

@@ -1,30 +1,41 @@
 import React, { useState } from 'react';
-import { X, BookOpen, Sparkles, Search, Type, Hash, MessageSquare } from 'lucide-react';
-import { ALPHABET_A_TO_Z, NUMBERS_0_TO_10, FULL_SIGN_VOCABULARY } from '../utils/signClassifier';
+import { X, BookOpen, Sparkles, Search, Type, Hand } from 'lucide-react';
+import { ALPHABET_A_TO_Z } from '../utils/signClassifier';
+
+const SPECIAL_CONTROL_GESTURES = [
+  {
+    id: 'ctrl_high_five',
+    name: 'High-Five (Separate Letter)',
+    badge: 'Separator',
+    description: 'Open all 5 fingers upright and naturally spread. Commits and separates the current letter into your word.',
+    phrase: 'Separate Letter 🖐️',
+    isSpecial: true,
+    actionType: 'high_five'
+  },
+  {
+    id: 'ctrl_two_hands',
+    name: 'Two Hands (Word Space)',
+    badge: 'Sentence Space',
+    description: 'Show both hands in the camera view. Inserts a space (" ") between words to build complete sentences.',
+    phrase: 'Add Space 🙌',
+    isSpecial: true,
+    actionType: 'space'
+  }
+];
 
 export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialLanguage = 'ISL' }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSection, setActiveSection] = useState('all'); // 'all', 'alphabet', 'numbers', or specific categories
+  const [activeSection, setActiveSection] = useState('all'); // 'all', 'special', 'alphabet'
 
   if (!isOpen) return null;
 
-  // Build combined items for browsing
+  // Build combined items for browsing (Alphabets & Delimiter Gestures only)
   const allItems = [
+    ...SPECIAL_CONTROL_GESTURES,
     ...ALPHABET_A_TO_Z.map(item => ({
       ...item,
       phrase: `Letter ${item.letter}`,
-      hindiPhrase: item.letter,
       badge: 'Fingerspelling'
-    })),
-    ...NUMBERS_0_TO_10.map(num => ({
-      ...num,
-      phrase: num.name,
-      hindiPhrase: num.digit,
-      badge: 'Number'
-    })),
-    ...FULL_SIGN_VOCABULARY.map(v => ({
-      ...v,
-      badge: v.category
     }))
   ];
 
@@ -34,29 +45,20 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.phrase && item.phrase.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.hindiPhrase && item.hindiPhrase.includes(searchQuery));
+      (item.letter && item.letter.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
     if (activeSection === 'all') return true;
+    if (activeSection === 'special') return item.isSpecial;
     if (activeSection === 'alphabet') return item.isLetter;
-    if (activeSection === 'numbers') return item.isNumber || item.category === 'Numbers';
-    return item.category === activeSection;
+    return true;
   });
 
   const categories = [
-    { id: 'all', label: 'All Signs (130+)' },
-    { id: 'alphabet', label: 'A–Z Alphabet (26)' },
-    { id: 'numbers', label: 'Numbers 0–10' },
-    { id: 'Greetings', label: 'Greetings' },
-    { id: 'Responses', label: 'Responses' },
-    { id: 'Questions', label: 'Questions' },
-    { id: 'Emergency', label: 'Emergency & Medical' },
-    { id: 'Daily Needs', label: 'Daily Needs' },
-    { id: 'Family', label: 'Family & Friends' },
-    { id: 'Emotions', label: 'Emotions' },
-    { id: 'Actions', label: 'Actions & Verbs' },
-    { id: 'Time', label: 'Time & Calendar' }
+    { id: 'all', label: `All Signs (${allItems.length})` },
+    { id: 'special', label: 'Separators & Space (🖐️ / 🙌)' },
+    { id: 'alphabet', label: 'A–Z Alphabet (26)' }
   ];
 
   return (
@@ -88,11 +90,11 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <BookOpen size={20} color="var(--accent-cyan)" />
               <h2 style={{ fontSize: '19px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Total Sign Language Encyclopedia
+                A–Z Alphabet Fingerspelling Guide
               </h2>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              Complete reference for Indian Sign Language (ISL) & ASL: A–Z fingerspelling, numbers, and 100+ conversational signs
+              Complete reference for A–Z fingerspelling, 🖐️ High-Five letter separation, and 🙌 Two-Hands sentence spacing.
             </p>
           </div>
 
@@ -129,7 +131,7 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
             <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px' }} />
             <input
               type="text"
-              placeholder="Search signs by name, phrase, English or Hindi meaning (e.g. Doctor, Namaste, A, Water)..."
+              placeholder="Search by letter (A-Z), number (0-10), or gesture description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -162,7 +164,7 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
           </div>
 
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-            Showing <strong>{filteredItems.length}</strong> signs
+            Showing <strong>{filteredItems.length}</strong> items
           </span>
         </div>
 
@@ -212,7 +214,7 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
               style={{
                 backgroundColor: 'var(--bg-card-subtle)',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
+                border: item.isSpecial ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--border-subtle)',
                 padding: '14px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -221,11 +223,11 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
                 transition: 'border-color 0.2s ease, transform 0.15s ease'
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.4)';
+                e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.6)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                e.currentTarget.style.borderColor = item.isSpecial ? 'rgba(6, 182, 212, 0.4)' : 'var(--border-subtle)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
@@ -237,8 +239,8 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
                   <span style={{
                     fontSize: '10px',
                     fontFamily: 'var(--font-mono)',
-                    color: item.isLetter ? 'var(--accent-blue)' : (item.isNumber ? 'var(--accent-green)' : 'var(--accent-cyan)'),
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    color: item.isSpecial ? '#22d3ee' : (item.isLetter ? 'var(--accent-blue)' : 'var(--accent-green)'),
+                    backgroundColor: item.isSpecial ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.06)',
                     padding: '2px 6px',
                     borderRadius: '4px'
                   }}>
@@ -253,8 +255,8 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
                 {item.phrase && (
                   <div style={{
                     fontSize: '11px',
-                    color: 'var(--accent-cyan)',
-                    backgroundColor: 'rgba(6, 182, 212, 0.08)',
+                    color: item.isSpecial ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                    backgroundColor: item.isSpecial ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                     padding: '5px 8px',
                     borderRadius: '4px',
                     fontStyle: 'italic'
@@ -266,15 +268,33 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
 
               <button
                 onClick={() => {
-                  onSelectSign({
-                    id: item.id,
-                    name: item.name || `Letter ${item.letter}`,
-                    phrase: item.phrase || item.letter || item.digit,
-                    hindiPhrase: item.hindiPhrase,
-                    confidence: 0.99,
-                    isLetter: item.isLetter,
-                    isNumber: item.isNumber
-                  });
+                  if (item.actionType === 'space') {
+                    onSelectSign({
+                      id: 'gesture_space',
+                      name: 'Space (Two Hands)',
+                      phrase: ' ',
+                      confidence: 0.99,
+                      isSpace: true,
+                      type: 'space'
+                    });
+                  } else if (item.actionType === 'high_five') {
+                    onSelectSign({
+                      id: 'gesture_high_five',
+                      name: 'High-Five (Separate)',
+                      confidence: 0.99,
+                      isSeparator: true,
+                      type: 'high_five'
+                    });
+                  } else {
+                    onSelectSign({
+                      id: item.id,
+                      name: item.name || `Letter ${item.letter}`,
+                      phrase: item.letter || item.digit,
+                      confidence: 0.99,
+                      isLetter: item.isLetter,
+                      isNumber: item.isNumber
+                    });
+                  }
                   onClose();
                 }}
                 style={{
@@ -296,7 +316,7 @@ export default function HowToSignModal({ isOpen, onClose, onSelectSign, initialL
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
               >
                 <Sparkles size={12} color="var(--accent-cyan)" />
-                <span>Test this sign</span>
+                <span>Test this gesture</span>
               </button>
             </div>
           ))}

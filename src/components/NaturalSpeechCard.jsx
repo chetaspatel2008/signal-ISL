@@ -76,7 +76,7 @@ export default function NaturalSpeechCard({
             <div className={`soundwave-bar ${isSpeaking ? '' : 'style-idle'}`} style={{ animationPlayState: isSpeaking ? 'running' : 'paused', height: isSpeaking ? undefined : '8px' }} />
           </div>
           <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Uni-Sign Speech Converter
+            Natural Voice Output
           </span>
         </div>
 
@@ -259,21 +259,22 @@ export default function NaturalSpeechCard({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            padding: '11px 20px',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: detectedText ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-strong)',
-            color: detectedText ? 'var(--text-primary)' : 'var(--text-muted)',
+            padding: '11px 22px',
+            borderRadius: '999px',
+            backgroundColor: detectedText ? '#ffffff' : 'rgba(255, 255, 255, 0.04)',
+            border: detectedText ? 'none' : '1px solid var(--border-subtle)',
+            color: detectedText ? '#07080a' : 'var(--text-muted)',
             fontSize: '13px',
-            fontWeight: 500,
+            fontWeight: 600,
             cursor: detectedText ? 'pointer' : 'not-allowed',
+            boxShadow: detectedText ? '0 2px 14px rgba(255, 255, 255, 0.2)' : 'none',
             transition: 'all 0.2s ease'
           }}
           onMouseEnter={e => {
-            if (detectedText) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.14)';
+            if (detectedText) e.currentTarget.style.backgroundColor = '#e2e8f0';
           }}
           onMouseLeave={e => {
-            if (detectedText) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            if (detectedText) e.currentTarget.style.backgroundColor = '#ffffff';
           }}
         >
           <Play size={14} fill="currentColor" />
@@ -288,8 +289,8 @@ export default function NaturalSpeechCard({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '6px',
-            padding: '11px 16px',
-            borderRadius: 'var(--radius-md)',
+            padding: '11px 18px',
+            borderRadius: '999px',
             backgroundColor: 'transparent',
             border: '1px solid var(--border-subtle)',
             color: isSpeaking ? '#f87171' : 'var(--text-muted)',

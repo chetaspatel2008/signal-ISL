@@ -9,13 +9,38 @@ import Footer from './components/Footer';
 import SessionHistoryModal from './components/SessionHistoryModal';
 import HowToSignModal from './components/HowToSignModal';
 import SettingsModal from './components/SettingsModal';
+import LandingPage from './components/LandingPage';
+import LoginPage from './components/LoginPage';
 import { uniSignSpeechConverter } from './utils/uniSignSpeechConverter';
-import confetti from 'canvas-confetti';
+import { onAuthChange, logoutUser, saveUserSessionData } from './firebase';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'login' | 'workspace'
+  const [user, setUser] = useState(null);
+
+  // Subscribe to Firebase auth state
+  useEffect(() => {
+    const unsubscribe = onAuthChange((firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          avatar: (firebaseUser.displayName || firebaseUser.email || 'U').charAt(0).toUpperCase(),
+          photoURL: firebaseUser.photoURL || null
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
   const [activeTab, setActiveTab] = useState('translator');
   const [signLanguage, setSignLanguage] = useState('ISL');
-  const [inputMode, setInputMode] = useState('phrases'); // 'phrases', 'alphabet', 'numbers'
+  const [inputMode, setInputMode] = useState('alphabet'); // 'alphabet', 'numbers', 'all'
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
 
@@ -39,13 +64,13 @@ export default function App() {
   // History log
   const [history, setHistory] = useState([
     {
-      signName: 'Namaste',
-      phrase: 'Namaste, greetings!',
+      signName: 'Letter H',
+      phrase: 'H',
       timestamp: '10:42 AM'
     },
     {
-      signName: 'Swagatam',
-      phrase: 'Aapka swagatam hai, welcome!',
+      signName: 'Letter I',
+      phrase: 'I',
       timestamp: '10:43 AM'
     }
   ]);
@@ -81,37 +106,33 @@ export default function App() {
     setSignsDetectedCount(prev => prev + 1);
     setRecentSigns(prev => [sign.name, ...prev.filter(s => s !== sign.name)].slice(0, 7));
 
-    // Handle single letter fingerspelling vs numbers vs word signs
-    if (sign.isLetter || sign.type === 'letter') {
-      // If it's just a letter, accurately write the letter!
+    // Handle space (Two Hands) vs letters vs numbers
+    if (sign.isSpace || sign.type === 'space') {
+      setDetectedText(prev => {
+        if (!prev || prev.endsWith(' ')) return prev;
+        return prev + ' ';
+      });
+
+      // When word is completed with space, speak the word if autoSpeak is on
+      if (autoSpeak) {
+        const words = (detectedText || '').trim().split(/\s+/);
+        const lastWord = words[words.length - 1];
+        if (lastWord) {
+          uniSignSpeechConverter.speak(lastWord, {
+            rate: 1.0,
+            volume: 1.0,
+            onEnd: () => {
+              setSpokenMessagesCount(c => c + 1);
+            }
+          });
+        }
+      }
+    } else if (sign.isLetter || sign.type === 'letter') {
       const char = (sign.letter || sign.text || sign.phrase || '').toUpperCase();
       setDetectedText(prev => prev + char);
     } else if (sign.isNumber || sign.type === 'number') {
       const num = sign.digit || sign.text || sign.phrase;
-      setDetectedText(prev => {
-        const clean = prev.trim();
-        return clean ? `${clean} ${num}` : num;
-      });
-    } else {
-      // If it's a sign of a word, accurately write the word!
-      const word = sign.text || sign.phrase || sign.name;
-      setDetectedText(prev => {
-        const clean = prev.trim();
-        if (!clean) return word;
-        // Prevent duplicate appending if the word is already the latest word
-        if (clean.endsWith(word)) return clean;
-        return `${clean} ${word}`;
-      });
-
-      if (autoSpeak) {
-        uniSignSpeechConverter.speak(word, {
-          rate: 1.0,
-          volume: 1.0,
-          onEnd: () => {
-            setSpokenMessagesCount(c => c + 1);
-          }
-        });
-      }
+      setDetectedText(prev => prev + num);
     }
 
     const now = new Date();
@@ -124,15 +145,6 @@ export default function App() {
       },
       ...prev
     ]);
-
-    if ((signsDetectedCount + 1) % 5 === 0) {
-      confetti({
-        particleCount: 25,
-        spread: 45,
-        origin: { y: 0.7 },
-        colors: ['#06b6d4', '#10b981', '#ffffff']
-      });
-    }
   };
 
   const handleFingerspellLetter = (char) => {
@@ -172,6 +184,27 @@ export default function App() {
     uniSignSpeechConverter.stop();
   };
 
+  if (currentView === 'landing') {
+    return (
+      <LandingPage
+        onGetStarted={() => setCurrentView('login')}
+        onLogin={() => setCurrentView('login')}
+      />
+    );
+  }
+
+  if (currentView === 'login') {
+    return (
+      <LoginPage
+        onLoginSuccess={(userData) => {
+          setUser(userData);
+          setCurrentView('workspace');
+        }}
+        onBackToLanding={() => setCurrentView('landing')}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-main)' }}>
       {/* Top Navbar */}
@@ -181,6 +214,17 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenHowToSign={() => setIsHowToSignOpen(true)}
+        user={user}
+        onNavigateToLanding={() => setCurrentView('landing')}
+        onLogout={async () => {
+          try {
+            await logoutUser();
+          } catch (e) {
+            console.warn('Logout error:', e);
+          }
+          setUser(null);
+          setCurrentView('landing');
+        }}
       />
 
       {/* Main Workspace Area */}

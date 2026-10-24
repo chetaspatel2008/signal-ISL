@@ -1,7 +1,18 @@
-import React from 'react';
-import { Hand, ShieldCheck, Sliders } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Sliders, Home, LogOut, User } from 'lucide-react';
+import BridgeLogo from './BridgeLogo';
 
-export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpenHistory, onOpenHowToSign }) {
+export default function Navbar({
+  activeTab,
+  setActiveTab,
+  onOpenSettings,
+  onOpenHistory,
+  onOpenHowToSign,
+  user,
+  onNavigateToLanding,
+  onLogout
+}) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
     <nav style={{
@@ -16,43 +27,40 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
       top: 0,
       zIndex: 100
     }}>
-      {/* Brand Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '8px',
-          background: 'linear-gradient(135deg, #06b6d4, #10b981)',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 10px rgba(6, 182, 212, 0.35)'
-        }}>
-          <Hand size={18} strokeWidth={2.5} />
+      {/* Brand Logo & Home Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div onClick={onNavigateToLanding} style={{ cursor: 'pointer' }} title="Return to Landing Page">
+          <BridgeLogo size={24} fontSize="20px" />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{
-            fontSize: '15px',
-            fontWeight: 800,
-            letterSpacing: '0.06em',
-            color: 'var(--text-primary)'
-          }}>
-            UNI-SIGN
-          </span>
-          <span style={{
-            fontSize: '9px',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 700,
-            color: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            padding: '1px 5px',
-            borderRadius: '4px'
-          }}>
-            ICLR 2025
-          </span>
-        </div>
+
+        <button
+          onClick={onNavigateToLanding}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            fontSize: '12px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            transition: 'color 0.2s, background-color 0.2s'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = '#ffffff';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <Home size={14} />
+          <span>Home</span>
+        </button>
       </div>
 
       {/* Center Nav Tabs */}
@@ -105,13 +113,13 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Uni-Sign Framework ST-GCN Badge */}
+        {/* On-device Engine Status Badge */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '6px 14px',
+            padding: '5px 12px',
             borderRadius: '999px',
             backgroundColor: 'rgba(16, 185, 129, 0.12)',
             border: '1px solid rgba(16, 185, 129, 0.35)',
@@ -120,17 +128,17 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
             fontWeight: 600,
             boxShadow: '0 0 12px rgba(16, 185, 129, 0.15)'
           }}
-          title="Uni-Sign (ICLR 2025) 4-Component ST-GCN Engine running locally and offline"
+          title="Bridge Vision Engine running 100% on-device in WebAssembly"
         >
           <span style={{
-            width: '8px',
-            height: '8px',
+            width: '7px',
+            height: '7px',
             borderRadius: '50%',
             backgroundColor: '#10b981',
             boxShadow: '0 0 8px #10b981',
             display: 'inline-block'
           }} />
-          <span>Uni-Sign ST-GCN Active</span>
+          <span>Bridge Engine Active</span>
         </div>
 
         {/* Private session badge */}
@@ -138,7 +146,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          padding: '6px 12px',
+          padding: '5px 12px',
           borderRadius: '999px',
           backgroundColor: 'rgba(255, 255, 255, 0.04)',
           border: '1px solid var(--border-subtle)',
@@ -146,7 +154,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
           color: 'var(--text-secondary)'
         }}>
           <ShieldCheck size={14} color="var(--accent-green)" />
-          <span>Private session</span>
+          <span>Private</span>
         </div>
 
         {/* Settings button */}
@@ -171,21 +179,106 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
           <Sliders size={18} />
         </button>
 
-        {/* User Avatar */}
-        <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '13px',
-          fontWeight: 600,
-          color: 'var(--text-primary)'
-        }}>
-          G
+        {/* User Profile Avatar & Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <div
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            title={user ? `${user.name} (${user.email})` : 'Account profile'}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: user ? '#06b6d4' : 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: user ? '#ffffff' : 'var(--text-primary)',
+              cursor: 'pointer',
+              boxShadow: user ? '0 0 10px rgba(6, 182, 212, 0.3)' : 'none'
+            }}
+          >
+            {user ? (user.avatar || user.name?.charAt(0).toUpperCase()) : 'G'}
+          </div>
+
+          {showUserMenu && (
+            <div style={{
+              position: 'absolute',
+              top: '42px',
+              right: 0,
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px',
+              minWidth: '190px',
+              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.7)',
+              zIndex: 110,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}>
+              <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {user?.name || 'Guest User'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user?.email || 'guest@bridge.live'}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onNavigateToLanding();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <Home size={14} color="var(--accent-cyan)" />
+                <span>Landing Page</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onLogout();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  color: '#f87171',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
