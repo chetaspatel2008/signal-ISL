@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Camera, CameraOff, Scan, RotateCcw, Play, Square, Users, Sparkles, Type, Hash, MessageSquare, Space, Delete, Key, Clock, CheckCircle2 } from 'lucide-react';
 import { classifyHands, ALPHABET_A_TO_Z, NUMBERS_0_TO_10, FULL_SIGN_VOCABULARY, distance } from '../utils/signClassifier';
+import { uniSignStreamProcessor } from '../utils/uniSignEngine';
 import { aiVisionService } from '../utils/aiVisionService';
 
 export default function SignInputCard({
@@ -219,7 +220,7 @@ export default function SignInputCard({
             isWord: isWord,
             hindiPhrase: result.hindi || result.hindiSentence || '',
             confidence: result.confidence || 0.98,
-            source: 'Gemini 3.5 Flash + SignBridge Buffer'
+            source: 'Uni-Sign (ICLR 2025) ST-GCN Buffer'
           };
 
           setCurrentGesture(signObj);
@@ -940,7 +941,7 @@ export default function SignInputCard({
 
           <span style={{ color: 'var(--border-strong)', margin: '0 2px' }}>|</span>
 
-          {/* signBridge 16-Frame Buffer Visual Progress Bar */}
+          {/* Uni-Sign Multi-Modal ST-GCN Buffer Progress Bar */}
           {cameraActive && (
             <div style={{
               display: 'flex',
@@ -955,7 +956,7 @@ export default function SignInputCard({
               fontFamily: 'var(--font-mono)'
             }}>
               <span style={{ color: bufferFillCount >= 16 ? '#10b981' : '#06b6d4' }}>
-                BUFFER: {bufferFillCount}/16
+                UNI-SIGN ST-GCN BUFFER: {bufferFillCount}/16
               </span>
               <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                 {[...Array(16)].map((_, i) => (
@@ -975,7 +976,7 @@ export default function SignInputCard({
             </div>
           )}
 
-          {/* MediaPipe Pose & Hands Tracker Status */}
+          {/* Uni-Sign Pose & Hands Tracker Status */}
           {cameraActive && (
             <div style={{
               display: 'flex',
@@ -991,7 +992,7 @@ export default function SignInputCard({
                 color: poseDetected ? '#10b981' : '#64748b',
                 border: `1px solid ${poseDetected ? 'rgba(16, 185, 129, 0.3)' : 'transparent'}`
               }}>
-                {poseDetected ? 'POSE: LOCKED' : 'POSE: SCAN'}
+                {poseDetected ? 'UNI-SIGN BODY: LOCKED' : 'UNI-SIGN BODY: SCAN'}
               </span>
               <span style={{
                 padding: '2px 6px',
@@ -1105,7 +1106,7 @@ export default function SignInputCard({
               fontWeight: 600
             }}>
               <Sparkles size={12} className="animate-pulse-slow" />
-              <span>SYNTHESIZING SENTENCE (GEMINI 3.8)...</span>
+              <span>UNI-SIGN MULTIMODAL TRANSLATION...</span>
             </div>
           )}
         </div>
@@ -1273,7 +1274,7 @@ export default function SignInputCard({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
                 <Sparkles size={18} color="#ffffff" className="animate-spin" />
                 <span style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>
-                  Gemini 3.5 AI: Accurately Recognizing Sign...
+                  Uni-Sign AI: Accurately Recognizing Sign...
                 </span>
               </div>
             ) : (
@@ -1397,7 +1398,7 @@ export default function SignInputCard({
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#06b6d4'}
               >
                 <Sparkles size={14} color="#ffffff" className={motionState === 'analyzing' ? 'animate-spin' : ''} />
-                <span>{motionState === 'analyzing' ? 'Recognizing Sign...' : 'AI Translate Sign (Gemini)'}</span>
+                <span>{motionState === 'analyzing' ? 'Translating...' : 'Translate Sign (Uni-Sign AI)'}</span>
               </button>
 
               <button

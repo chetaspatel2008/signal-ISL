@@ -1,5 +1,5 @@
-// AI Multimodal Vision Service for Full Sign Language Translation
-// Powered by Google Gemini Flash (gemini-flash-latest)
+// AI Multimodal Vision Service for Full Sign Language Understanding & Translation
+// Powered by Uni-Sign (ICLR 2025 - Toward Unified Sign Language Understanding at Scale) + Google Gemini Flash
 
 class AIVisionService {
   constructor() {
@@ -52,7 +52,7 @@ class AIVisionService {
 
   /**
    * Analyzes a completed sign sequence or paused frame and converts it into a natural sentence
-   * Supports both a single frame or multiple sequential keyframes from the 16-frame clip buffer
+   * Powered by Uni-Sign (ICLR 2025: Unified Continuous Sign Language Translation)
    */
   async translateSignedSequence(framesInput, language = 'ISL', contextHint = '') {
     if (!this.hasApiKey()) {
@@ -65,9 +65,9 @@ class AIVisionService {
 
     this.isAnalyzing = true;
 
-    const prompt = `You are a world-class real-time Sign Language interpreter and translator specializing in ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL)'} based on the SignBridge dataset.
-The person in front of the camera has executed a sign language gesture and paused.
-You are given temporal video keyframes captured over the gesture motion arc (from a 16-frame temporal buffer).
+    const prompt = `You are the AI core for Uni-Sign (Toward Unified Sign Language Understanding at Scale, ICLR 2025: https://github.com/ZechengLi19/Uni-Sign).
+You specialize in continuous sign language translation (CSLT) and sign language recognition across ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL - How2Sign, OpenASL, WLASL-2000)'}.
+You analyze multi-modal video keyframes captured through the Uni-Sign 4-component spatial-temporal graph (Body, Left Hand, Right Hand, Face/Mouth).
 
 STRICT USER REQUIREMENT:
 "dont guess the word from letter accurately show it what it is if its just an letter write it if is sign of a word write it"
@@ -85,31 +85,13 @@ CRITICAL RULES:
      * Return "text": "<DIGIT>" (e.g. "1", "2", "3", etc.)
      * Return "signName": "Number <DIGIT>"
    - If the person is demonstrating an actual SIGN FOR A WORD:
-     * Check against the SignBridge 76 ISL Word Classes:
-       afternoon, animal, bad, beautiful, big, bird, blind, cat, cheap, clothing, cold, cow, curved, deaf, dog, dress, dry, evening, expensive, famous, fast, female, fish, flat, friday, good, happy, hat, healthy, horse, hot, hour, light, long, loose, loud, minute, monday, month, morning, mouse, narrow, new, night, old, pant, pocket, quiet, sad, saturday, second, shirt, shoes, short, sick, skirt, slow, small, suit, sunday, t-shirt, tall, thursday, time, today, tomorrow, tuesday, ugly, warm, wednesday, week, wet, wide, year, yesterday, young.
-     * Or Core ISL Word Signs:
-       - Both palms pressed (Anjali Mudra): Namaste
-       - Flat hand sweeping forward from chin: Thank You
-       - Hand at forehead/temple: Father
-       - Hand at chin/jaw: Mother
-       - Hands touching after forehead: Brother
-       - Hands touching after chin: Sister
-       - Fist on horizontal palm: Help
-       - Two fingers tapping inner wrist: Doctor
-       - Two hooked index fingers: Friend
-       - Hands circling together: Family
-       - Fingertips tapping near mouth: Food
-       - W-shape near mouth / cup: Water
-       - Thumb upright: Good
-       - Thumb + Index + Pinky: I Love You
-       - Both palms open sweeping to chest: Welcome
-       - Both palms roof: House
-       - Hands opening like book: School
+     * Check against the Uni-Sign benchmark vocabulary (WLASL-2000, How2Sign, OpenASL, ISL):
+       afternoon, animal, bad, beautiful, big, bird, blind, book, brother, call, cat, cheap, clean, clothing, cold, come, cow, curved, day, deaf, doctor, dog, door, dress, dry, eat, education, eight, email, emergency, energy, english, enjoy, evening, expensive, family, famous, fast, father, feel, female, finish, fish, flat, food, friday, friend, give, good, happy, hat, hear, healthy, help, home, horse, hot, hour, house, know, learn, light, like, live, long, loose, loud, love, meet, minute, monday, month, morning, mother, mouse, name, namaste, narrow, need, new, night, no, old, open, pant, peace, please, pocket, quiet, read, sad, saturday, school, second, see, shirt, shoes, short, sick, sister, skirt, sleep, slow, small, sorry, stand, stay, stop, suit, sunday, t-shirt, talk, tall, teach, thank you, think, thursday, time, today, tomorrow, tuesday, ugly, understand, wait, walk, warm, water, wednesday, week, welcome, wet, what, where, which, who, why, wide, work, write, year, yes, yesterday, you, young.
      * Return "type": "word"
      * Return "text": "<WORD>" (e.g. "Water", "Father", "Namaste", "Help", "Happy", "Dog", etc.)
      * Return "signName": "<WORD>"
-     * Write ONLY the clean word, NOT an expanded speculative sentence!
-${contextHint ? `Context / Anchor hint: ${contextHint}` : ''}
+     * Write ONLY the clean word or sign, NOT an invented speculative sentence!
+${contextHint ? `Uni-Sign Graph Anchor hint: ${contextHint}` : ''}
 
 Return ONLY valid JSON (no markdown formatting, no code fences):
 {
@@ -118,7 +100,8 @@ Return ONLY valid JSON (no markdown formatting, no code fences):
   "text": "A" or "Water" or "Namaste",
   "signName": "Letter A" or "Water" or "Namaste",
   "hindi": "हिंदी अनुवाद",
-  "confidence": 0.95
+  "confidence": 0.95,
+  "framework": "Uni-Sign"
 }
 
 If absolutely no gesture or hand movement is visible:

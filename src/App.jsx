@@ -10,7 +10,7 @@ import SessionHistoryModal from './components/SessionHistoryModal';
 import HowToSignModal from './components/HowToSignModal';
 import SettingsModal from './components/SettingsModal';
 import ApiKeyModal from './components/ApiKeyModal';
-import { speechController } from './utils/speechSynth';
+import { uniSignSpeechConverter } from './utils/uniSignSpeechConverter';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -106,7 +106,7 @@ export default function App() {
       });
 
       if (autoSpeak) {
-        speechController.speak(word, {
+        uniSignSpeechConverter.speak(word, {
           rate: 1.0,
           volume: 1.0,
           onEnd: () => {
@@ -165,13 +165,13 @@ export default function App() {
     setRecentSigns([]);
     setSignsDetectedCount(0);
     setSpokenMessagesCount(0);
-    speechController.stop();
+    uniSignSpeechConverter.stop();
   };
 
   const handleClearText = () => {
     setDetectedText('');
     setRecentSigns([]);
-    speechController.stop();
+    uniSignSpeechConverter.stop();
   };
 
   return (

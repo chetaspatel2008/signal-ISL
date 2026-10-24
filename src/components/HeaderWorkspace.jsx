@@ -25,14 +25,14 @@ export default function HeaderWorkspace({ isSessionActive, sessionTime }) {
           lineHeight: 1.2,
           marginBottom: '6px'
         }}>
-          Translation workspace
+          Uni-Sign Workspace
         </h1>
         <p style={{
           fontSize: '14px',
           color: 'var(--text-secondary)',
           fontWeight: 400
         }}>
-          A little movement. A world of conversation.
+          Continuous Multimodal Sign Language Understanding & Neural Speech (ICLR 2025)
         </p>
       </div>
 

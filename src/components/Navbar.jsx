@@ -24,23 +24,37 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
           width: '32px',
           height: '32px',
           borderRadius: '8px',
-          backgroundColor: '#ffffff',
-          color: '#000000',
+          background: 'linear-gradient(135deg, #06b6d4, #10b981)',
+          color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 2px 8px rgba(255, 255, 255, 0.15)'
+          boxShadow: '0 2px 10px rgba(6, 182, 212, 0.35)'
         }}>
           <Hand size={18} strokeWidth={2.5} />
         </div>
-        <span style={{
-          fontSize: '15px',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          color: 'var(--text-primary)'
-        }}>
-          SIGNVOICE
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{
+            fontSize: '15px',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            color: 'var(--text-primary)'
+          }}>
+            UNI-SIGN
+          </span>
+          <span style={{
+            fontSize: '9px',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 700,
+            color: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            padding: '1px 5px',
+            borderRadius: '4px'
+          }}>
+            ICLR 2025
+          </span>
+        </div>
       </div>
 
       {/* Center Nav Tabs */}

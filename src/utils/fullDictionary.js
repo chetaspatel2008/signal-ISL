@@ -566,7 +566,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter M hand shape circling gently in front of shoulder',
     phrase: 'Somvar, Monday.',
     hindiPhrase: 'सोमवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'mangalvar',
@@ -575,7 +575,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter T hand shape circling gently in front of shoulder',
     phrase: 'Mangalvar, Tuesday.',
     hindiPhrase: 'मंगलवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'budhvar',
@@ -584,7 +584,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter W hand shape circling gently in front of shoulder',
     phrase: 'Budhvar, Wednesday.',
     hindiPhrase: 'बुधवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'guruvar',
@@ -593,7 +593,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter H or Th hand shape circling gently',
     phrase: 'Guruvar, Thursday.',
     hindiPhrase: 'गुरुवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'shukravar',
@@ -602,7 +602,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter F hand shape circling gently in front of shoulder',
     phrase: 'Shukravar, Friday.',
     hindiPhrase: 'शुक्रवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'shanivar',
@@ -611,7 +611,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Letter S fist circling gently in front of shoulder',
     phrase: 'Shanivar, Saturday.',
     hindiPhrase: 'शनिवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'ravivar',
@@ -620,7 +620,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both open hands tracing sun rays or circle overhead',
     phrase: 'Ravivar, Sunday holiday.',
     hindiPhrase: 'रविवार!',
-    tags: ['SignBridge 76', 'Day', 'ISL']
+    tags: ['Uni-Sign', 'Day', 'ISL']
   },
   {
     id: 'dopahar',
@@ -629,7 +629,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Forearm resting horizontal while dominant hand points straight upward like midday sun',
     phrase: 'Dopahar ka samay, good afternoon.',
     hindiPhrase: 'दोपहर!',
-    tags: ['SignBridge 76', 'Afternoon']
+    tags: ['Uni-Sign', 'Afternoon']
   },
   {
     id: 'shaam',
@@ -638,7 +638,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Curved hand dipping downward over horizon line',
     phrase: 'Shaam ka samay, good evening.',
     hindiPhrase: 'शुभ संध्या!',
-    tags: ['SignBridge 76', 'Evening']
+    tags: ['Uni-Sign', 'Evening']
   },
 
   // --- SignBridge 76 ISL Benchmark Classes: Animals & Living Beings ---
@@ -649,7 +649,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Fingertips touching chest and rocking inward and outward like breathing',
     phrase: 'Yeh ek janwar hai, this is an animal.',
     hindiPhrase: 'जानवर!',
-    tags: ['SignBridge 76', 'Animal']
+    tags: ['Uni-Sign', 'Animal']
   },
   {
     id: 'kutta',
@@ -658,7 +658,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Snapping fingers and patting thigh, or panting gesture with hands',
     phrase: 'Wafadar kutta, friendly dog.',
     hindiPhrase: 'कुत्ता!',
-    tags: ['SignBridge 76', 'Dog']
+    tags: ['Uni-Sign', 'Dog']
   },
   {
     id: 'billi',
@@ -667,7 +667,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Thumb and index fingers stroking imaginary whiskers on cheeks',
     phrase: 'Chhoti billi, cute cat.',
     hindiPhrase: 'बिल्ली!',
-    tags: ['SignBridge 76', 'Cat', 'Whiskers']
+    tags: ['Uni-Sign', 'Cat', 'Whiskers']
   },
   {
     id: 'chidiya',
@@ -676,7 +676,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Index and thumb opening and closing at lips like a beak while hands flap like wings',
     phrase: 'Chidiya udd rahi hai, bird flying.',
     hindiPhrase: 'चिड़िया!',
-    tags: ['SignBridge 76', 'Bird']
+    tags: ['Uni-Sign', 'Bird']
   },
   {
     id: 'machhli',
@@ -685,7 +685,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Flat vertical hand swimming forward through water in gentle s-curves',
     phrase: 'Pani mein machhli, fish in water.',
     hindiPhrase: 'मछली!',
-    tags: ['SignBridge 76', 'Fish']
+    tags: ['Uni-Sign', 'Fish']
   },
   {
     id: 'gaay',
@@ -694,7 +694,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Y-hand or thumbs at temples pointing outward like cow horns',
     phrase: 'Gaay doodh deti hai, the cow gives milk.',
     hindiPhrase: 'गाय!',
-    tags: ['SignBridge 76', 'Cow', 'Horns']
+    tags: ['Uni-Sign', 'Cow', 'Horns']
   },
   {
     id: 'ghoda',
@@ -703,7 +703,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Two fingers at forehead flicking upward like perked horse ears',
     phrase: 'Tez daudne wala ghoda, fast horse.',
     hindiPhrase: 'घोड़ा!',
-    tags: ['SignBridge 76', 'Horse']
+    tags: ['Uni-Sign', 'Horse']
   },
   {
     id: 'chuha',
@@ -712,7 +712,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Index finger flicking across the tip of the nose twice',
     phrase: 'Chhota chuha, small mouse.',
     hindiPhrase: 'चूहा!',
-    tags: ['SignBridge 76', 'Mouse']
+    tags: ['Uni-Sign', 'Mouse']
   },
 
   // --- SignBridge 76 ISL Benchmark Classes: Descriptors & Attributes ---
@@ -723,7 +723,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Open 5-hand circling around face, fingers gathering together at chin gracefully',
     phrase: 'Bahut sundar hai, very beautiful!',
     hindiPhrase: 'बहुत सुंदर!',
-    tags: ['SignBridge 76', 'Beauty']
+    tags: ['Uni-Sign', 'Beauty']
   },
   {
     id: 'bada',
@@ -732,7 +732,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both curved L-hands moving wide apart showing massive size',
     phrase: 'Bahut bada aakar, very big.',
     hindiPhrase: 'बड़ा!',
-    tags: ['SignBridge 76', 'Size']
+    tags: ['Uni-Sign', 'Size']
   },
   {
     id: 'chhota',
@@ -741,7 +741,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both open palms moving close together showing compact size',
     phrase: 'Chhota aakar, small size.',
     hindiPhrase: 'छोटा!',
-    tags: ['SignBridge 76', 'Size']
+    tags: ['Uni-Sign', 'Size']
   },
   {
     id: 'lamba',
@@ -750,7 +750,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Dominant hand rising high above head showing impressive height',
     phrase: 'Kafi lamba hai, very tall.',
     hindiPhrase: 'लंबा!',
-    tags: ['SignBridge 76', 'Height']
+    tags: ['Uni-Sign', 'Height']
   },
   {
     id: 'tez',
@@ -759,7 +759,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Index fingers hooked and snapping back quickly like firing arrows',
     phrase: 'Turant aur tez, very fast.',
     hindiPhrase: 'तेज़!',
-    tags: ['SignBridge 76', 'Speed']
+    tags: ['Uni-Sign', 'Speed']
   },
   {
     id: 'dheere',
@@ -768,7 +768,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Hand stroking slowly up the back of the other arm',
     phrase: 'Dheere dheere chalo, slowly please.',
     hindiPhrase: 'धीरे!',
-    tags: ['SignBridge 76', 'Speed']
+    tags: ['Uni-Sign', 'Speed']
   },
   {
     id: 'garam',
@@ -777,7 +777,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Clawed hand at mouth twisting quickly outward like expelling heat',
     phrase: 'Yeh bahut garam hai, it is very hot.',
     hindiPhrase: 'गरम है!',
-    tags: ['SignBridge 76', 'Temperature']
+    tags: ['Uni-Sign', 'Temperature']
   },
   {
     id: 'thanda',
@@ -786,7 +786,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both fists shaking near chest like shivering in cold weather',
     phrase: 'Bahut thand lag rahi hai, it is very cold.',
     hindiPhrase: 'ठंडा है!',
-    tags: ['SignBridge 76', 'Cold']
+    tags: ['Uni-Sign', 'Cold']
   },
   {
     id: 'mehenga',
@@ -795,7 +795,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Flat O-hand bursting open and throwing money away upward',
     phrase: 'Yeh kafi mehenga hai, this is expensive.',
     hindiPhrase: 'महंगा!',
-    tags: ['SignBridge 76', 'Money']
+    tags: ['Uni-Sign', 'Money']
   },
   {
     id: 'sasta',
@@ -804,7 +804,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Dominant flat hand brushing downward off non-dominant palm',
     phrase: 'Kafi sasta aur kifayati, cheap and affordable.',
     hindiPhrase: 'सस्ता!',
-    tags: ['SignBridge 76', 'Price']
+    tags: ['Uni-Sign', 'Price']
   },
   {
     id: 'bimar',
@@ -813,7 +813,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Middle finger touching forehead while other middle finger touches stomach',
     phrase: 'Tabiyat theek nahi, I feel sick.',
     hindiPhrase: 'बीमार हूँ!',
-    tags: ['SignBridge 76', 'Health']
+    tags: ['Uni-Sign', 'Health']
   },
   {
     id: 'swasth',
@@ -822,7 +822,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both hands touching shoulders and pulling forward into strong firm fists',
     phrase: 'Swasth aur tandurust, healthy and energetic.',
     hindiPhrase: 'स्वस्थ!',
-    tags: ['SignBridge 76', 'Fitness']
+    tags: ['Uni-Sign', 'Fitness']
   },
   {
     id: 'kapde',
@@ -831,7 +831,7 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Thumbs brushing downward against chest clothes twice',
     phrase: 'Naye kapde, clean clothes.',
     hindiPhrase: 'कपड़े!',
-    tags: ['SignBridge 76', 'Clothing']
+    tags: ['Uni-Sign', 'Clothing']
   },
   {
     id: 'jootey',
@@ -840,6 +840,6 @@ export const FULL_SIGN_VOCABULARY = [
     description: 'Both closed fists bumping together side-by-side twice at waist level',
     phrase: 'Jootey pehno, wear shoes.',
     hindiPhrase: 'जूते!',
-    tags: ['SignBridge 76', 'Footwear']
+    tags: ['Uni-Sign', 'Footwear']
   }
 ];

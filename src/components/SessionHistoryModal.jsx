@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Play, Clock, MessageSquare, Trash2 } from 'lucide-react';
-import { speechController } from '../utils/speechSynth';
+import { uniSignSpeechConverter } from '../utils/uniSignSpeechConverter';
 
 export default function SessionHistoryModal({ isOpen, onClose, history, onClearHistory }) {
   if (!isOpen) return null;
@@ -99,7 +99,7 @@ export default function SessionHistoryModal({ isOpen, onClose, history, onClearH
                 </div>
 
                 <button
-                  onClick={() => speechController.speak(item.phrase)}
+                  onClick={() => uniSignSpeechConverter.speak(item.phrase)}
                   title="Replay speech"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.08)',

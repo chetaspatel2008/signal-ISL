@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Square, Radio, Waves } from 'lucide-react';
-import { speechController } from '../utils/speechSynth';
+import { Volume2, VolumeX, Play, Square, Radio, Waves, Sparkles } from 'lucide-react';
+import { uniSignSpeechConverter } from '../utils/uniSignSpeechConverter';
 
 export default function NaturalSpeechCard({
   detectedText,
@@ -16,10 +16,10 @@ export default function NaturalSpeechCard({
 
   useEffect(() => {
     const updateVoices = () => {
-      const avail = speechController.getAvailableVoices();
+      const avail = uniSignSpeechConverter.getVoices();
       setVoices(avail);
       if (avail.length > 0 && !selectedVoiceURI) {
-        // Try to find a nice English voice like Aria, Guy, Jenny, Google, or default
+        // Try to find a nice expressive voice like Aria, Guy, Jenny, Google, or default
         const preferred = avail.find(v => v.name.includes('Aria') || v.name.includes('Jenny') || v.name.includes('Natural') || v.lang.startsWith('en')) || avail[0];
         setSelectedVoiceURI(preferred.voiceURI);
       }
@@ -34,7 +34,7 @@ export default function NaturalSpeechCard({
   const handleSpeak = () => {
     if (!detectedText) return;
 
-    speechController.speak(detectedText, {
+    uniSignSpeechConverter.speak(detectedText, {
       voiceURI: selectedVoiceURI,
       rate: speed,
       volume: volume,
@@ -48,7 +48,7 @@ export default function NaturalSpeechCard({
   };
 
   const handleStop = () => {
-    speechController.stop();
+    uniSignSpeechConverter.stop();
     setIsSpeaking(false);
   };
 
@@ -76,7 +76,7 @@ export default function NaturalSpeechCard({
             <div className={`soundwave-bar ${isSpeaking ? '' : 'style-idle'}`} style={{ animationPlayState: isSpeaking ? 'running' : 'paused', height: isSpeaking ? undefined : '8px' }} />
           </div>
           <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Natural speech
+            Uni-Sign Speech Converter
           </span>
         </div>
 
