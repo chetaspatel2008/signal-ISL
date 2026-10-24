@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import SessionHistoryModal from './components/SessionHistoryModal';
 import HowToSignModal from './components/HowToSignModal';
 import SettingsModal from './components/SettingsModal';
+import LegalModal from './components/LegalModal';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
 import { uniSignSpeechConverter } from './utils/uniSignSpeechConverter';
@@ -58,6 +59,8 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHowToSignOpen, setIsHowToSignOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState('terms');
   const [mirrorMode, setMirrorMode] = useState(false);
   const [sensitivity, setSensitivity] = useState(70);
 
@@ -295,7 +298,13 @@ export default function App() {
         />
 
         {/* Footer */}
-        <Footer onOpenHowToSign={() => setIsHowToSignOpen(true)} />
+        <Footer
+          onOpenHowToSign={() => setIsHowToSignOpen(true)}
+          onOpenLegal={(tab) => {
+            setLegalTab(tab);
+            setIsLegalOpen(true);
+          }}
+        />
       </main>
 
       {/* Modals */}
@@ -326,6 +335,12 @@ export default function App() {
         setMirrorMode={setMirrorMode}
         sensitivity={sensitivity}
         setSensitivity={setSensitivity}
+      />
+
+      <LegalModal
+        isOpen={isLegalOpen}
+        onClose={() => setIsLegalOpen(false)}
+        initialTab={legalTab}
       />
     </div>
   );

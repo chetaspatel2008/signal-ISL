@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Check, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import BridgeLogo from './BridgeLogo';
+import LegalModal from './LegalModal';
 import {
   loginWithEmail,
   registerWithEmail,
@@ -16,6 +17,8 @@ export default function LoginPage({ onLoginSuccess, onBackToLanding }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState('terms');
 
   const getFriendlyErrorMessage = (err) => {
     const code = err.code || '';
@@ -551,11 +554,32 @@ export default function LoginPage({ onLoginSuccess, onBackToLanding }) {
           marginTop: '24px'
         }}>
           By signing in, you agree to Bridge's{' '}
-          <a href="#terms" style={{ color: '#64748b', textDecoration: 'underline' }}>Terms of Service</a>
+          <button
+            onClick={() => { setLegalModalTab('terms'); setLegalModalOpen(true); }}
+            style={{ background: 'none', border: 'none', color: '#64748b', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#0f172a'}
+            onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+          >
+            Terms of Service
+          </button>
           {' '}and{' '}
-          <a href="#privacy" style={{ color: '#64748b', textDecoration: 'underline' }}>Privacy Policy</a>.
+          <button
+            onClick={() => { setLegalModalTab('privacy'); setLegalModalOpen(true); }}
+            style={{ background: 'none', border: 'none', color: '#64748b', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#0f172a'}
+            onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+          >
+            Privacy Policy & Logs
+          </button>.
         </div>
       </div>
+
+      {/* Terms & Privacy Modal */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
     </div>
   );
 }
