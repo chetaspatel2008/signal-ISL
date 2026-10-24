@@ -199,15 +199,25 @@ export default function SignInputCard({
         const anchorHint = currentGesture ? `${currentGesture.name} (anchor: ${currentGesture.anchor || 'body'})` : '';
         const result = await aiVisionService.translateSignedSequence(keyframesToSend, signLanguage, anchorHint);
 
-        if (result && result.detected && (result.sentence || result.signName)) {
+        if (result && result.detected && (result.text || result.signName || result.sentence)) {
           lastProcessedTimeRef.current = Date.now();
-          const phraseToSpeak = result.sentence || result.signName;
+          const cleanText = (result.text || result.sentence || result.signName || '').trim();
+          const isLetter = result.type === 'letter' || (cleanText.length === 1 && /^[A-Z]$/i.test(cleanText));
+          const isNumber = result.type === 'number' || (cleanText.length === 1 && /^[0-9]$/.test(cleanText));
+          const isWord = !isLetter && !isNumber;
 
           const signObj = {
-            id: (result.signName || 'sign').toLowerCase().replace(/\s+/g, '_'),
-            name: result.signName || 'Translated Sign',
-            phrase: phraseToSpeak,
-            hindiPhrase: result.hindiSentence || '',
+            id: (result.signName || cleanText).toLowerCase().replace(/\s+/g, '_'),
+            name: result.signName || (isLetter ? `Letter ${cleanText.toUpperCase()}` : cleanText),
+            type: isLetter ? 'letter' : (isNumber ? 'number' : 'word'),
+            text: isLetter ? cleanText.toUpperCase() : cleanText,
+            phrase: isLetter ? cleanText.toUpperCase() : cleanText,
+            isLetter: isLetter,
+            letter: isLetter ? cleanText.toUpperCase() : undefined,
+            isNumber: isNumber,
+            digit: isNumber ? cleanText : undefined,
+            isWord: isWord,
+            hindiPhrase: result.hindi || result.hindiSentence || '',
             confidence: result.confidence || 0.98,
             source: 'Gemini 3.5 Flash + SignBridge Buffer'
           };
@@ -216,7 +226,7 @@ export default function SignInputCard({
           setConfirmedGesture(signObj);
           setHoldProgress(100);
           setDetectionConfidence(Math.round(signObj.confidence * 100));
-          setLastSpokenPhrase(phraseToSpeak);
+          setLastSpokenPhrase(signObj.text);
           onGestureDetected(signObj);
 
           if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
@@ -232,7 +242,7 @@ export default function SignInputCard({
         setConfirmedGesture(currentGesture);
         setHoldProgress(100);
         onGestureDetected(currentGesture);
-        setLastSpokenPhrase(currentGesture.phrase);
+        setLastSpokenPhrase(currentGesture.text || currentGesture.phrase);
 
         if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
         confirmedTimeoutRef.current = setTimeout(() => {
@@ -1263,7 +1273,7 @@ export default function SignInputCard({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
                 <Sparkles size={18} color="#ffffff" className="animate-spin" />
                 <span style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>
-                  Gemini 3.5 AI: Analyzing Sign & Guessing Word...
+                  Gemini 3.5 AI: Accurately Recognizing Sign...
                 </span>
               </div>
             ) : (
@@ -1367,7 +1377,7 @@ export default function SignInputCard({
               <button
                 onClick={processCompletedSigning}
                 disabled={motionState === 'analyzing'}
-                title="Click anytime to have Gemini 3.5 Vision AI analyze your sign and guess what you are saying"
+                title="Click anytime to have Gemini 3.5 Vision AI accurately recognize whether this is a letter or a word sign"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1387,7 +1397,7 @@ export default function SignInputCard({
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#06b6d4'}
               >
                 <Sparkles size={14} color="#ffffff" className={motionState === 'analyzing' ? 'animate-spin' : ''} />
-                <span>{motionState === 'analyzing' ? 'Analyzing Sign...' : 'AI Guess Sign (Gemini)'}</span>
+                <span>{motionState === 'analyzing' ? 'Recognizing Sign...' : 'AI Translate Sign (Gemini)'}</span>
               </button>
 
               <button

@@ -83,28 +83,30 @@ export default function App() {
     setSignsDetectedCount(prev => prev + 1);
     setRecentSigns(prev => [sign.name, ...prev.filter(s => s !== sign.name)].slice(0, 7));
 
-    // Handle single letter fingerspelling vs full phrase
-    if (sign.isLetter) {
-      const char = sign.letter || sign.phrase;
+    // Handle single letter fingerspelling vs numbers vs word signs
+    if (sign.isLetter || sign.type === 'letter') {
+      // If it's just a letter, accurately write the letter!
+      const char = (sign.letter || sign.text || sign.phrase || '').toUpperCase();
       setDetectedText(prev => prev + char);
-    } else if (sign.isNumber) {
-      const num = sign.digit || sign.phrase;
+    } else if (sign.isNumber || sign.type === 'number') {
+      const num = sign.digit || sign.text || sign.phrase;
       setDetectedText(prev => {
         const clean = prev.trim();
         return clean ? `${clean} ${num}` : num;
       });
     } else {
-      const phrase = sign.phrase;
+      // If it's a sign of a word, accurately write the word!
+      const word = sign.text || sign.phrase || sign.name;
       setDetectedText(prev => {
         const clean = prev.trim();
-        if (!clean) return phrase;
-        // Prevent duplicate appending if the phrase is already the latest word
-        if (clean.endsWith(phrase)) return clean;
-        return `${clean} ${phrase}`;
+        if (!clean) return word;
+        // Prevent duplicate appending if the word is already the latest word
+        if (clean.endsWith(word)) return clean;
+        return `${clean} ${word}`;
       });
 
       if (autoSpeak) {
-        speechController.speak(sign.phrase, {
+        speechController.speak(word, {
           rate: 1.0,
           volume: 1.0,
           onEnd: () => {

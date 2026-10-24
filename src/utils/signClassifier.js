@@ -470,9 +470,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'namaste',
         name: 'Namaste (नमस्ते)',
-        phrase: 'Namaste, greetings!',
+        text: 'Namaste',
+        phrase: 'Namaste',
         hindiPhrase: 'नमस्ते!',
         confidence: 0.99,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -487,9 +489,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'madad',
         name: 'Madad (मदद / Help)',
-        phrase: 'Mujhe madad chahiye, I need help.',
-        hindiPhrase: 'मुझे मदद चाहिए!',
+        text: 'Help',
+        phrase: 'Help',
+        hindiPhrase: 'मदद!',
         confidence: 0.97,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -501,9 +505,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'doctor',
         name: 'Doctor (डॉक्टर)',
-        phrase: 'Doctor ko bulaiye, call a doctor please.',
-        hindiPhrase: 'डॉक्टर को बुलाइए!',
+        text: 'Doctor',
+        phrase: 'Doctor',
+        hindiPhrase: 'डॉक्टर!',
         confidence: 0.96,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -514,9 +520,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'swagatam',
         name: 'Swagatam (स्वागतम / Welcome)',
-        phrase: 'Aapka swagatam hai, welcome!',
-        hindiPhrase: 'आपका स्वागत है!',
+        text: 'Welcome',
+        phrase: 'Welcome',
+        hindiPhrase: 'स्वागतम!',
         confidence: 0.96,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -526,9 +534,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'dost',
         name: 'Dost (दोस्त / Friend)',
-        phrase: 'Aap mere dost hain, you are my friend.',
+        text: 'Friend',
+        phrase: 'Friend',
         hindiPhrase: 'दोस्त!',
         confidence: 0.94,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -538,9 +548,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'parivar',
         name: 'Parivar (परिवार / Family)',
-        phrase: 'Yeh mera parivar hai, this is my family.',
+        text: 'Family',
+        phrase: 'Family',
         hindiPhrase: 'परिवार!',
         confidence: 0.93,
+        isWord: true,
         handsUsed: 2
       };
     }
@@ -559,8 +571,6 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
 
   // Only do body-anchored checks when Pose is available
   if (foreheadAnchor && chinAnchor) {
-    const handTopY = Math.min(thumbTip.y, indexTip.y, middleTip.y, h1[16].y, h1[20].y);
-
     // Father: Hand touching forehead/temple — STRICT: require pose + hand actually near forehead
     const handNearForehead = distance(palmCenter, foreheadAnchor) < 0.18 ||
                              distance(thumbTip, foreheadAnchor) < 0.18;
@@ -568,9 +578,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'pitaji',
         name: 'Father (पिताजी)',
-        phrase: 'My father.',
+        text: 'Father',
+        phrase: 'Father',
         hindiPhrase: 'पिताजी!',
         confidence: 0.98,
+        isWord: true,
         handsUsed: 1,
         anchor: 'Forehead'
       };
@@ -585,9 +597,41 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
       return {
         id: 'mataji',
         name: 'Mother (माँ)',
-        phrase: 'My mother.',
+        text: 'Mother',
+        phrase: 'Mother',
         hindiPhrase: 'माँ!',
         confidence: 0.98,
+        isWord: true,
+        handsUsed: 1,
+        anchor: 'Chin'
+      };
+    }
+
+    // Food / Eat: Fingers grouped near mouth/chin
+    if (distance(thumbTip, chinAnchor) < 0.16 && distance(indexTip, thumbTip) < 0.10) {
+      return {
+        id: 'khana',
+        name: 'Khana (खाना / Food)',
+        text: 'Food',
+        phrase: 'Food',
+        hindiPhrase: 'खाना!',
+        confidence: 0.95,
+        isWord: true,
+        handsUsed: 1,
+        anchor: 'Mouth'
+      };
+    }
+
+    // Thank You: Flat hand moving forward from chin
+    if (distance(thumbTip, chinAnchor) < 0.20 && extCount >= 3) {
+      return {
+        id: 'dhanyavaad',
+        name: 'Dhanyavaad (धन्यवाद / Thank You)',
+        text: 'Thank You',
+        phrase: 'Thank You',
+        hindiPhrase: 'धन्यवाद!',
+        confidence: 0.95,
+        isWord: true,
         handsUsed: 1,
         anchor: 'Chin'
       };
@@ -595,133 +639,67 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
   }
 
   // ==========================================
-  // LAYER 3: CORE VOCABULARY WORDS (SignBridge & ISL Phrases)
-  // Check words FIRST so letters don't swallow words when in phrases mode!
+  // LAYER 3: DISTINCTIVE ONE-HAND WORD SIGNS
+  // Only unambiguous signs that don't collide with fingerspelling alphabet!
   // ==========================================
-  const indexMiddleDist = distance(indexTip, middleTip);
 
-  // 1. I Love You (Universal / ISL / ASL) — unique 3-finger combo
-  if (d1.thumb.extended && d1.index.extended && d1.pinky.extended &&
-      d1.middle.curled && d1.ring.curled) {
-    return {
-      id: 'pyaar',
-      name: 'Pyaar (प्यार / I Love You)',
-      phrase: 'Dil se prem aur pyaar, I love you.',
-      hindiPhrase: 'प्यार!',
-      confidence: 0.98,
-      handsUsed: 1
-    };
-  }
-
-  // 2. Theek Hai / OK / Perfect — thumb+index circle
-  if (thumbIndexDist < 0.07 && d1.middle.extended && d1.ring.extended && d1.pinky.extended) {
-    return {
-      id: 'theek_hai',
-      name: 'Theek Hai (ठीक है / All Good)',
-      phrase: 'Sab theek hai, all is good.',
-      hindiPhrase: 'सब ठीक है!',
-      confidence: 0.96,
-      handsUsed: 1
-    };
-  }
-
-  // 3. Good / Thumbs Up (बहुत बढ़िया)
+  // 1. Good / Thumbs Up (बहुत बढ़िया)
   const isThumbUpright = h1[4].y < h1[2].y - 0.05;
   if (isThumbUpright && d1.index.curled && d1.middle.curled && d1.ring.curled && d1.pinky.curled) {
     return {
       id: 'good',
       name: 'Good / Thumbs Up (बहुत बढ़िया)',
-      phrase: 'Sab theek hai, very good!',
+      text: 'Good',
+      phrase: 'Good',
       hindiPhrase: 'बहुत बढ़िया!',
       confidence: 0.98,
+      isWord: true,
       handsUsed: 1
     };
   }
 
-  // 4. Shanti / Peace / Victory (शांति)
-  if (d1.index.extended && d1.middle.extended && d1.ring.curled && d1.pinky.curled && !d1.thumb.extended) {
+  // 2. I Love You (Universal ISL/ASL mudra: Thumb + Index + Pinky)
+  if (d1.thumb.extended && d1.index.extended && d1.pinky.extended &&
+      d1.middle.curled && d1.ring.curled) {
     return {
-      id: 'shanti',
-      name: 'Shanti (शांति / Peace)',
-      phrase: 'Shanti aur vijay, peace and victory.',
-      hindiPhrase: 'शांति!',
-      confidence: 0.96,
+      id: 'pyaar',
+      name: 'I Love You (प्यार)',
+      text: 'I Love You',
+      phrase: 'I Love You',
+      hindiPhrase: 'प्यार!',
+      confidence: 0.98,
+      isWord: true,
       handsUsed: 1
     };
   }
 
-  // 5. Pani / Water (पानी) — W shape with 3 fingers extended
-  if (d1.index.extended && d1.middle.extended && d1.ring.extended && d1.pinky.curled) {
+  // ==========================================
+  // LAYER 4: ACCURATE ALPHABET FINGERSPELLING (A - Z)
+  // CRITICAL RULE: If the user is showing a letter handshape, accurately return the LETTER!
+  // Do NOT guess words or sentences from letters!
+  // ==========================================
+  const alphabetMatch = classifyAlphabet(h1);
+  if (alphabetMatch) {
     return {
-      id: 'pani',
-      name: 'Pani (पानी / Water)',
-      phrase: 'Mujhe thoda pani chahiye, I need water.',
-      hindiPhrase: 'पानी!',
-      confidence: 0.95,
-      handsUsed: 1
+      ...alphabetMatch,
+      text: alphabetMatch.letter,
+      phrase: alphabetMatch.letter,
+      isLetter: true,
+      isWord: false
     };
   }
 
-  // 6. Khana / Food / Eat (खाना) — fingers grouped near mouth/chin
-  if (chinAnchor && distance(thumbTip, chinAnchor) < 0.16 && distance(indexTip, thumbTip) < 0.10) {
+  // ==========================================
+  // LAYER 5: NUMBERS (0 - 10)
+  // ==========================================
+  const numberMatch = classifyNumber(h1);
+  if (numberMatch) {
     return {
-      id: 'khana',
-      name: 'Khana (खाना / Food, Eat)',
-      phrase: 'Kripya khana dijiye, please give me food.',
-      hindiPhrase: 'खाना!',
-      confidence: 0.95,
-      handsUsed: 1,
-      anchor: 'Mouth'
-    };
-  }
-
-  // 7. Dhanyavaad / Thank You (धन्यवाद) — chin sweep forward
-  if (chinAnchor && distance(thumbTip, chinAnchor) < 0.20 && extCount >= 3) {
-    return {
-      id: 'dhanyavaad',
-      name: 'Dhanyavaad (धन्यवाद / Thank You)',
-      phrase: 'Dhanyavaad, thank you very much.',
-      hindiPhrase: 'धन्यवाद!',
-      confidence: 0.95,
-      handsUsed: 1,
-      anchor: 'Chin'
-    };
-  }
-
-  // 8. Call Me (Phone Sign / फ़ोन करना)
-  if (d1.thumb.extended && d1.pinky.extended &&
-      d1.index.curled && d1.middle.curled && d1.ring.curled) {
-    return {
-      id: 'call_me',
-      name: 'Call Me (फ़ोन करना)',
-      phrase: 'Mujhe phone kijiye, call me later.',
-      hindiPhrase: 'फ़ोन कीजिये!',
-      confidence: 0.92,
-      handsUsed: 1
-    };
-  }
-
-  // 9. Open Palm / Hello / Namaste (chest / neutral elevation)
-  if (extCount >= 4) {
-    return {
-      id: 'namaste',
-      name: 'Namaste / Hello (नमस्ते)',
-      phrase: 'Namaste, greetings!',
-      hindiPhrase: 'नमस्ते!',
-      confidence: 0.90,
-      handsUsed: 1
-    };
-  }
-
-  // 10. Closed Fist / Haan / Yes
-  if (d1.index.curled && d1.middle.curled && d1.ring.curled && d1.pinky.curled && d1.thumb.curled) {
-    return {
-      id: 'haan',
-      name: 'Haan (हाँ / Yes)',
-      phrase: 'Haan, yes.',
-      hindiPhrase: 'हाँ!',
-      confidence: 0.88,
-      handsUsed: 1
+      ...numberMatch,
+      text: numberMatch.digit,
+      phrase: numberMatch.digit,
+      isNumber: true,
+      isWord: false
     };
   }
 

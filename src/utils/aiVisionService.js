@@ -65,56 +65,69 @@ class AIVisionService {
 
     this.isAnalyzing = true;
 
-    const prompt = `You are a world-class real-time Sign Language interpreter and translator specializing in ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL)'} based on the SignBridge ISL recognition dataset.
-The person in front of the camera has just executed a sign language gesture and paused to let you translate their complete sign or sentence.
+    const prompt = `You are a world-class real-time Sign Language interpreter and translator specializing in ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL)'} based on the SignBridge dataset.
+The person in front of the camera has executed a sign language gesture and paused.
 You are given temporal video keyframes captured over the gesture motion arc (from a 16-frame temporal buffer).
 
-Analyze the precise hand shapes, finger configurations, palm orientations, and spatial positioning relative to anatomical anchors (head, face, chin, chest, shoulders, wrists):
+STRICT USER REQUIREMENT:
+"dont guess the word from letter accurately show it what it is if its just an letter write it if is sign of a word write it"
 
-1. Standard SignBridge 76 ISL Word Classes:
-afternoon, animal, bad, beautiful, big, bird, blind, cat, cheap, clothing, cold, cow, curved, deaf, dog, dress, dry, evening, expensive, famous, fast, female, fish, flat, friday, good, happy, hat, healthy, horse, hot, hour, light, long, loose, loud, minute, monday, month, morning, mouse, narrow, new, night, old, pant, pocket, quiet, sad, saturday, second, shirt, shoes, short, sick, skirt, slow, small, suit, sunday, t-shirt, tall, thursday, time, today, tomorrow, tuesday, ugly, warm, wednesday, week, wet, wide, year, yesterday, young.
-
-2. Core Everyday Conversational Signs & Mudras:
-- Hand on/near Forehead: Father (पिताजी / Dad)
-- Hand on/near Chin/Lower Face: Mother (माँ / Mom)
-- Hands side-by-side touching after forehead: Brother (भाई)
-- Hands side-by-side touching after chin: Sister (बहन)
-- Both palms pressed in Anjali Mudra: Namaste (नमस्ते / Hello / Greetings)
-- Flat hand sweeping forward from lips/chin: Thank You (धन्यवाद)
-- Two fingers tapping opposite inner wrist: Doctor (डॉक्टर)
-- Fist resting on horizontal flat palm: Help (मदद)
-- Fist circling gently over chest: Sorry (माफ़ कीजिये)
-- Hooked index fingers interlocking: Friend (दोस्त)
-- Thumb + Index + Pinky extended (ILY sign): I Love You (प्यार)
-- V-shape upright: Peace / Victory (शांति)
-- W-shape near mouth or downward wave: Water (पानी)
-- Thumb upright: Good / Super (बहुत बढ़िया)
-- Closed fist nodding: Yes (हाँ)
-- Pointing forward: You (आप)
-- Both hands open sweeping inward toward chest: Welcome (स्वागतम)
-- Dual F-hands circling together: Family (परिवार)
-- Fingers tapping near mouth: Food / Eat (खाना)
-- Cups shape to mouth: Drink (पीना)
-- Both palms flat roof shape: Home / House (घर)
-- Two flat hands opening like a book: School / Study (पढ़ाई)
+CRITICAL RULES:
+1. STRICT DISCRIMINATION BETWEEN LETTERS AND WORDS:
+   - NEVER guess or predict words from a single letter handshape!
+   - If the person is showing a fingerspelling alphabet letter handshape (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z):
+     * Return "type": "letter"
+     * Return "text": "<LETTER>" (single uppercase letter e.g. "A", "B", "C", "V", "W", "Y", etc.)
+     * Return "signName": "Letter <LETTER>"
+     * DO NOT guess or expand into an English word starting with that letter!
+   - If the person is showing a number digit (0 to 10):
+     * Return "type": "number"
+     * Return "text": "<DIGIT>" (e.g. "1", "2", "3", etc.)
+     * Return "signName": "Number <DIGIT>"
+   - If the person is demonstrating an actual SIGN FOR A WORD:
+     * Check against the SignBridge 76 ISL Word Classes:
+       afternoon, animal, bad, beautiful, big, bird, blind, cat, cheap, clothing, cold, cow, curved, deaf, dog, dress, dry, evening, expensive, famous, fast, female, fish, flat, friday, good, happy, hat, healthy, horse, hot, hour, light, long, loose, loud, minute, monday, month, morning, mouse, narrow, new, night, old, pant, pocket, quiet, sad, saturday, second, shirt, shoes, short, sick, skirt, slow, small, suit, sunday, t-shirt, tall, thursday, time, today, tomorrow, tuesday, ugly, warm, wednesday, week, wet, wide, year, yesterday, young.
+     * Or Core ISL Word Signs:
+       - Both palms pressed (Anjali Mudra): Namaste
+       - Flat hand sweeping forward from chin: Thank You
+       - Hand at forehead/temple: Father
+       - Hand at chin/jaw: Mother
+       - Hands touching after forehead: Brother
+       - Hands touching after chin: Sister
+       - Fist on horizontal palm: Help
+       - Two fingers tapping inner wrist: Doctor
+       - Two hooked index fingers: Friend
+       - Hands circling together: Family
+       - Fingertips tapping near mouth: Food
+       - W-shape near mouth / cup: Water
+       - Thumb upright: Good
+       - Thumb + Index + Pinky: I Love You
+       - Both palms open sweeping to chest: Welcome
+       - Both palms roof: House
+       - Hands opening like book: School
+     * Return "type": "word"
+     * Return "text": "<WORD>" (e.g. "Water", "Father", "Namaste", "Help", "Happy", "Dog", etc.)
+     * Return "signName": "<WORD>"
+     * Write ONLY the clean word, NOT an expanded speculative sentence!
 ${contextHint ? `Context / Anchor hint: ${contextHint}` : ''}
 
-Your task is to identify and guess what word or sentence the person is demonstrating, and return it accurately.
 Return ONLY valid JSON (no markdown formatting, no code fences):
 {
   "detected": true,
-  "signName": "Word or Phrase",
-  "sentence": "English conversational phrase or word",
-  "hindiSentence": "हिंदी अनुवाद",
+  "type": "letter" | "word" | "number",
+  "text": "A" or "Water" or "Namaste",
+  "signName": "Letter A" or "Water" or "Namaste",
+  "hindi": "हिंदी अनुवाद",
   "confidence": 0.95
 }
 
 If absolutely no gesture or hand movement is visible:
 {
   "detected": false,
+  "type": "none",
+  "text": "",
   "signName": "",
-  "sentence": "",
-  "hindiSentence": "",
+  "hindi": "",
   "confidence": 0
 }`;
 
