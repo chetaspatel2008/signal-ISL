@@ -721,8 +721,6 @@ export default function SignInputCard({
     ? FULL_SIGN_VOCABULARY
     : FULL_SIGN_VOCABULARY.filter(item => item.category === selectedCategory);
 
-  const hasApiKey = aiVisionService.hasApiKey();
-
   return (
     <div style={{
       backgroundColor: 'var(--bg-card)',
