@@ -595,26 +595,12 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
   }
 
   // ==========================================
-  // LAYER 3: ALPHABET & NUMBER RECOGNITION
-  // Try alphabet and number classification before generic phrase matchers
-  // ==========================================
-  const alphabetCandidate = classifyAlphabet(h1);
-  if (alphabetCandidate) {
-    return alphabetCandidate;
-  }
-
-  const numberCandidate = classifyNumber(h1);
-  if (numberCandidate) {
-    return numberCandidate;
-  }
-
-  // ==========================================
-  // LAYER 4: GENERIC SINGLE-HAND PHRASE SIGNS (lower priority)
-  // These are only reached if no alphabet/number matched
+  // LAYER 3: CORE VOCABULARY WORDS (SignBridge & ISL Phrases)
+  // Check words FIRST so letters don't swallow words when in phrases mode!
   // ==========================================
   const indexMiddleDist = distance(indexTip, middleTip);
 
-  // I Love You (Universal / ISL / ASL) — unique 3-finger combo
+  // 1. I Love You (Universal / ISL / ASL) — unique 3-finger combo
   if (d1.thumb.extended && d1.index.extended && d1.pinky.extended &&
       d1.middle.curled && d1.ring.curled) {
     return {
@@ -627,7 +613,7 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
     };
   }
 
-  // Theek Hai / OK / Perfect — thumb+index circle
+  // 2. Theek Hai / OK / Perfect — thumb+index circle
   if (thumbIndexDist < 0.07 && d1.middle.extended && d1.ring.extended && d1.pinky.extended) {
     return {
       id: 'theek_hai',
@@ -639,11 +625,11 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
     };
   }
 
-  // Good / Thumbs Up
+  // 3. Good / Thumbs Up (बहुत बढ़िया)
   const isThumbUpright = h1[4].y < h1[2].y - 0.05;
   if (isThumbUpright && d1.index.curled && d1.middle.curled && d1.ring.curled && d1.pinky.curled) {
     return {
-      id: 'theek_hai',
+      id: 'good',
       name: 'Good / Thumbs Up (बहुत बढ़िया)',
       phrase: 'Sab theek hai, very good!',
       hindiPhrase: 'बहुत बढ़िया!',
@@ -652,7 +638,57 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
     };
   }
 
-  // Call Me (Phone Sign) — thumb+pinky, matches Y letter but with body context
+  // 4. Shanti / Peace / Victory (शांति)
+  if (d1.index.extended && d1.middle.extended && d1.ring.curled && d1.pinky.curled && !d1.thumb.extended) {
+    return {
+      id: 'shanti',
+      name: 'Shanti (शांति / Peace)',
+      phrase: 'Shanti aur vijay, peace and victory.',
+      hindiPhrase: 'शांति!',
+      confidence: 0.96,
+      handsUsed: 1
+    };
+  }
+
+  // 5. Pani / Water (पानी) — W shape with 3 fingers extended
+  if (d1.index.extended && d1.middle.extended && d1.ring.extended && d1.pinky.curled) {
+    return {
+      id: 'pani',
+      name: 'Pani (पानी / Water)',
+      phrase: 'Mujhe thoda pani chahiye, I need water.',
+      hindiPhrase: 'पानी!',
+      confidence: 0.95,
+      handsUsed: 1
+    };
+  }
+
+  // 6. Khana / Food / Eat (खाना) — fingers grouped near mouth/chin
+  if (chinAnchor && distance(thumbTip, chinAnchor) < 0.16 && distance(indexTip, thumbTip) < 0.10) {
+    return {
+      id: 'khana',
+      name: 'Khana (खाना / Food, Eat)',
+      phrase: 'Kripya khana dijiye, please give me food.',
+      hindiPhrase: 'खाना!',
+      confidence: 0.95,
+      handsUsed: 1,
+      anchor: 'Mouth'
+    };
+  }
+
+  // 7. Dhanyavaad / Thank You (धन्यवाद) — chin sweep forward
+  if (chinAnchor && distance(thumbTip, chinAnchor) < 0.20 && extCount >= 3) {
+    return {
+      id: 'dhanyavaad',
+      name: 'Dhanyavaad (धन्यवाद / Thank You)',
+      phrase: 'Dhanyavaad, thank you very much.',
+      hindiPhrase: 'धन्यवाद!',
+      confidence: 0.95,
+      handsUsed: 1,
+      anchor: 'Chin'
+    };
+  }
+
+  // 8. Call Me (Phone Sign / फ़ोन करना)
   if (d1.thumb.extended && d1.pinky.extended &&
       d1.index.curled && d1.middle.curled && d1.ring.curled) {
     return {
@@ -665,7 +701,7 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
     };
   }
 
-  // Open Palm / Hello / Namaste (chest / neutral elevation)
+  // 9. Open Palm / Hello / Namaste (chest / neutral elevation)
   if (extCount >= 4) {
     return {
       id: 'namaste',
@@ -677,7 +713,7 @@ export function classifyHands(handsLandmarks, poseLandmarks = null, language = '
     };
   }
 
-  // Closed Fist / Haan / Yes
+  // 10. Closed Fist / Haan / Yes
   if (d1.index.curled && d1.middle.curled && d1.ring.curled && d1.pinky.curled && d1.thumb.curled) {
     return {
       id: 'haan',

@@ -5,15 +5,18 @@ class AIVisionService {
   constructor() {
     this.apiKey = this.loadApiKey();
     this.isAnalyzing = false;
-    this.modelName = 'gemini-flash-latest';
+    this.modelName = 'gemini-3.5-flash';
+    this.fallbackModel = 'gemini-3.5-flash-lite';
   }
 
   loadApiKey() {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('signvoice_gemini_key');
-      if (stored) return stored;
+      if (stored && stored.length > 10) return stored;
     }
-    return import.meta.env.VITE_GEMINI_API_KEY || '';
+    const envKey = import.meta.env?.VITE_GEMINI_API_KEY;
+    if (envKey && envKey.trim().length > 10) return envKey.trim();
+    return '';
   }
 
   setApiKey(key) {
@@ -38,8 +41,8 @@ class AIVisionService {
     if (!videoEl || videoEl.videoWidth === 0) return null;
 
     const canvas = document.createElement('canvas');
-    canvas.width = Math.min(800, videoEl.videoWidth);
-    canvas.height = Math.min(600, videoEl.videoHeight);
+    canvas.width = Math.min(640, videoEl.videoWidth);
+    canvas.height = Math.min(480, videoEl.videoHeight);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
 
@@ -62,46 +65,51 @@ class AIVisionService {
 
     this.isAnalyzing = true;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
+    const prompt = `You are a world-class real-time Sign Language interpreter and translator specializing in ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL)'} based on the SignBridge ISL recognition dataset.
+The person in front of the camera has just executed a sign language gesture and paused to let you translate their complete sign or sentence.
+You are given temporal video keyframes captured over the gesture motion arc (from a 16-frame temporal buffer).
 
-    const prompt = `You are a world-class real-time Sign Language interpreter and translator specializing in ${language === 'ISL' ? 'Indian Sign Language (ISL)' : 'American Sign Language (ASL)'}.
-The person in front of the camera has just executed a sign language gesture and paused to let you translate their complete sentence.
-You are given temporal video keyframes captured over the gesture motion arc (from the 16-frame temporal buffer).
+Analyze the precise hand shapes, finger configurations, palm orientations, and spatial positioning relative to anatomical anchors (head, face, chin, chest, shoulders, wrists):
 
-Observe the precise hand shapes, palm orientations, and spatial positioning relative to anatomical anchors:
-- Hand touching or near Forehead / Brow: Father (पिताजी / Dad)
-- Hand touching or near Chin / Lower Face: Mother (माँ / Mom)
-- Hands touching side-by-side after forehead: Brother (भाई)
-- Hands touching side-by-side after chin: Sister (बहन)
-- Both palms pressed in Anjali Mudra: Namaste (नमस्ते / Greetings)
-- Flat hand sweeping forward from chin/lips: Thank You (धन्यवाद)
-- Two fingers tapping opposite inner wrist pulse: Doctor (डॉक्टर)
-- Fist resting on flat horizontal palm: Help (मदद)
+1. Standard SignBridge 76 ISL Word Classes:
+afternoon, animal, bad, beautiful, big, bird, blind, cat, cheap, clothing, cold, cow, curved, deaf, dog, dress, dry, evening, expensive, famous, fast, female, fish, flat, friday, good, happy, hat, healthy, horse, hot, hour, light, long, loose, loud, minute, monday, month, morning, mouse, narrow, new, night, old, pant, pocket, quiet, sad, saturday, second, shirt, shoes, short, sick, skirt, slow, small, suit, sunday, t-shirt, tall, thursday, time, today, tomorrow, tuesday, ugly, warm, wednesday, week, wet, wide, year, yesterday, young.
+
+2. Core Everyday Conversational Signs & Mudras:
+- Hand on/near Forehead: Father (पिताजी / Dad)
+- Hand on/near Chin/Lower Face: Mother (माँ / Mom)
+- Hands side-by-side touching after forehead: Brother (भाई)
+- Hands side-by-side touching after chin: Sister (बहन)
+- Both palms pressed in Anjali Mudra: Namaste (नमस्ते / Hello / Greetings)
+- Flat hand sweeping forward from lips/chin: Thank You (धन्यवाद)
+- Two fingers tapping opposite inner wrist: Doctor (डॉक्टर)
+- Fist resting on horizontal flat palm: Help (मदद)
 - Fist circling gently over chest: Sorry (माफ़ कीजिये)
 - Hooked index fingers interlocking: Friend (दोस्त)
-- Thumb + Index + Pinky extended: I Love You (प्यार)
+- Thumb + Index + Pinky extended (ILY sign): I Love You (प्यार)
 - V-shape upright: Peace / Victory (शांति)
-- W-shape near mouth: Water (पानी)
-- Thumb upright: Good / All Good (बहुत बढ़िया / ठीक है)
+- W-shape near mouth or downward wave: Water (पानी)
+- Thumb upright: Good / Super (बहुत बढ़िया)
 - Closed fist nodding: Yes (हाँ)
 - Pointing forward: You (आप)
-- Hands open sweeping inward: Welcome (स्वागतम)
+- Both hands open sweeping inward toward chest: Welcome (स्वागतम)
 - Dual F-hands circling together: Family (परिवार)
-- Also recognize standard ISL 76 vocabulary classes:
-  afternoon, animal, bad, beautiful, big, bird, blind, cat, cheap, clothing, cold, cow, deaf, dog, dress, dry, evening, expensive, famous, fast, female, fish, flat, friday, good, happy, hat, healthy, horse, hot, hour, light, long, loud, minute, monday, month, morning, mouse, narrow, new, night, old, pant, pocket, quiet, sad, saturday, second, shirt, shoes, short, sick, skirt, slow, small, suit, sunday, t-shirt, tall, thursday, time, today, tomorrow, tuesday, ugly, warm, wednesday, week, wet, wide, year, yesterday, young.
-${contextHint ? `Recent context / detected anchor: ${contextHint}` : ''}
+- Fingers tapping near mouth: Food / Eat (खाना)
+- Cups shape to mouth: Drink (पीना)
+- Both palms flat roof shape: Home / House (घर)
+- Two flat hands opening like a book: School / Study (पढ़ाई)
+${contextHint ? `Context / Anchor hint: ${contextHint}` : ''}
 
-Convert their signed thought into a polished, complete, and grammatically natural conversational sentence that can be spoken aloud.
+Your task is to identify and guess what word or sentence the person is demonstrating, and return it accurately.
 Return ONLY valid JSON (no markdown formatting, no code fences):
 {
   "detected": true,
-  "signName": "Father",
-  "sentence": "My father.",
-  "hindiSentence": "मेरे पिताजी।",
-  "confidence": 0.98
+  "signName": "Word or Phrase",
+  "sentence": "English conversational phrase or word",
+  "hindiSentence": "हिंदी अनुवाद",
+  "confidence": 0.95
 }
 
-If no clear sign language gesture was made:
+If absolutely no gesture or hand movement is visible:
 {
   "detected": false,
   "signName": "",
@@ -124,37 +132,56 @@ If no clear sign language gesture was made:
       return null;
     }
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                ...imageParts
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 220
-          }
-        })
-      });
+    const modelsToTry = [this.modelName, this.fallbackModel];
+    let lastError = null;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `API error ${response.status}`);
+    try {
+      for (const currentModel of modelsToTry) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${this.apiKey}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    ...imageParts
+                  ]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 250
+              }
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `API error ${response.status}`);
+          }
+
+          const data = await response.json();
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+          // Extract JSON string even if model wraps in markdown
+          let jsonText = rawText;
+          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            jsonText = jsonMatch[0];
+          }
+
+          const result = JSON.parse(jsonText);
+          return result;
+        } catch (err) {
+          lastError = err;
+          console.warn(`Gemini model ${currentModel} failed, trying fallback if available:`, err.message);
+        }
       }
 
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const result = JSON.parse(cleanJson);
-      return result;
+      throw lastError || new Error('Failed to interpret sign with Gemini Vision');
     } catch (err) {
       console.error('Gemini Sign Translation Error:', err);
       throw err;
@@ -165,22 +192,32 @@ If no clear sign language gesture was made:
 
   async testConnection(testKey) {
     const key = testKey || this.apiKey;
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${key}`;
+    const modelsToTry = [this.modelName, this.fallbackModel];
+    let lastErr = null;
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Respond with OK.' }] }]
-      })
-    });
+    for (const m of modelsToTry) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Respond with OK.' }] }]
+          })
+        });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `Connection failed with status ${res.status}`);
+        if (res.ok) {
+          this.modelName = m;
+          return true;
+        }
+        const err = await res.json();
+        lastErr = new Error(err.error?.message || `Status ${res.status}`);
+      } catch (e) {
+        lastErr = e;
+      }
     }
 
-    return true;
+    throw lastErr || new Error('Connection failed');
   }
 }
 

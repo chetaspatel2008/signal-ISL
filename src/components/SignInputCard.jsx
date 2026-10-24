@@ -209,19 +209,37 @@ export default function SignInputCard({
             phrase: phraseToSpeak,
             hindiPhrase: result.hindiSentence || '',
             confidence: result.confidence || 0.98,
-            source: 'Gemini 3.8 Flash + SignBridge Buffer'
+            source: 'Gemini 3.5 Flash + SignBridge Buffer'
           };
 
           setCurrentGesture(signObj);
+          setConfirmedGesture(signObj);
+          setHoldProgress(100);
           setDetectionConfidence(Math.round(signObj.confidence * 100));
           setLastSpokenPhrase(phraseToSpeak);
           onGestureDetected(signObj);
+
+          if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
+          confirmedTimeoutRef.current = setTimeout(() => {
+            setConfirmedGesture(null);
+            setHoldProgress(0);
+            setCandidateGesture(null);
+          }, 1500);
         }
       } else if (currentGesture) {
         // Fallback to recognized on-device gesture if offline or no key
         lastProcessedTimeRef.current = Date.now();
+        setConfirmedGesture(currentGesture);
+        setHoldProgress(100);
         onGestureDetected(currentGesture);
         setLastSpokenPhrase(currentGesture.phrase);
+
+        if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
+        confirmedTimeoutRef.current = setTimeout(() => {
+          setConfirmedGesture(null);
+          setHoldProgress(0);
+          setCandidateGesture(null);
+        }, 1500);
       }
     } catch (err) {
       console.error('Turn-taking translation error:', err);
@@ -398,7 +416,7 @@ export default function SignInputCard({
         }
       } else {
         // Hands are held steady or paused
-        if (isMovingRef.current && now - lastMotionTimeRef.current > 650) {
+        if (isMovingRef.current && now - lastMotionTimeRef.current > 550) {
           // Person paused to finish what they want to say
           setMotionState('paused');
 
@@ -407,7 +425,18 @@ export default function SignInputCard({
               isMovingRef.current = false;
               pauseTriggerTimeoutRef.current = null;
               processCompletedSigning();
-            }, 350); // 350ms verification pause
+            }, 300); // 300ms verification pause
+          }
+        } else if (inputMode === 'phrases' && !isMoving && !isAnalyzingRef.current && aiVisionService.hasApiKey()) {
+          // In phrases mode: If hands are held steady and not in motion, let Gemini Vision interpret
+          if (now - lastMotionTimeRef.current > 900 && now - lastProcessedTimeRef.current > 2500) {
+            if (!pauseTriggerTimeoutRef.current && clipBufferRef.current.length >= 3) {
+              setMotionState('paused');
+              pauseTriggerTimeoutRef.current = setTimeout(() => {
+                pauseTriggerTimeoutRef.current = null;
+                processCompletedSigning();
+              }, 250);
+            }
           }
         }
       }
@@ -1205,7 +1234,7 @@ export default function SignInputCard({
         )}
 
         {/* Central Recognition & Hold-to-Confirm Visual HUD */}
-        {cameraActive && (candidateGesture || confirmedGesture) && (
+        {cameraActive && (candidateGesture || confirmedGesture || motionState === 'analyzing') && (
           <div style={{
             position: 'absolute',
             bottom: '54px',
@@ -1218,84 +1247,95 @@ export default function SignInputCard({
             gap: '8px',
             backgroundColor: confirmedGesture 
               ? 'rgba(16, 185, 129, 0.95)' 
-              : 'rgba(12, 13, 16, 0.88)',
+              : (motionState === 'analyzing' ? 'rgba(6, 182, 212, 0.92)' : 'rgba(12, 13, 16, 0.88)'),
             backdropFilter: 'blur(16px)',
-            border: `1.5px solid ${confirmedGesture ? '#10b981' : 'rgba(6, 182, 212, 0.5)'}`,
+            border: `1.5px solid ${confirmedGesture ? '#10b981' : (motionState === 'analyzing' ? '#06b6d4' : 'rgba(6, 182, 212, 0.5)')}`,
             boxShadow: confirmedGesture 
               ? '0 8px 32px rgba(16, 185, 129, 0.5)' 
-              : '0 8px 30px rgba(0, 0, 0, 0.8)',
+              : (motionState === 'analyzing' ? '0 8px 32px rgba(6, 182, 212, 0.5)' : '0 8px 30px rgba(0, 0, 0, 0.8)'),
             borderRadius: '16px',
             padding: '12px 22px',
             minWidth: '280px',
             maxWidth: '420px',
             transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
-            {/* Header: Sign Name & Confirmation Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: confirmedGesture ? '#ffffff' : 'var(--accent-cyan)',
-                  letterSpacing: '0.04em'
-                }}>
-                  {confirmedGesture ? `✓ ${confirmedGesture.name}` : candidateGesture?.name}
+            {motionState === 'analyzing' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+                <Sparkles size={18} color="#ffffff" className="animate-spin" />
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>
+                  Gemini 3.5 AI: Analyzing Sign & Guessing Word...
                 </span>
-                {candidateGesture?.phrase && !confirmedGesture && (
-                  <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
-                    "{candidateGesture.phrase}"
+              </div>
+            ) : (
+              <>
+                {/* Header: Sign Name & Confirmation Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: confirmedGesture ? '#ffffff' : 'var(--accent-cyan)',
+                      letterSpacing: '0.04em'
+                    }}>
+                      {confirmedGesture ? `✓ ${confirmedGesture.name}` : candidateGesture?.name}
+                    </span>
+                    {candidateGesture?.phrase && !confirmedGesture && (
+                      <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)' }}>
+                        "{candidateGesture.phrase}"
+                      </span>
+                    )}
+                  </div>
+
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono)',
+                    color: confirmedGesture ? '#ffffff' : (holdProgress > 70 ? '#10b981' : 'var(--accent-cyan)'),
+                    backgroundColor: confirmedGesture ? 'rgba(0,0,0,0.2)' : 'rgba(255, 255, 255, 0.08)',
+                    padding: '2px 8px',
+                    borderRadius: '999px'
+                  }}>
+                    {confirmedGesture ? 'CONFIRMED' : `${holdProgress}%`}
                   </span>
+                </div>
+
+                {/* Hold-to-Confirm Animated Progress Bar */}
+                {!confirmedGesture && (
+                  <div style={{
+                    width: '100%',
+                    height: '7px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    borderRadius: '999px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${holdProgress}%`,
+                      height: '100%',
+                      borderRadius: '999px',
+                      backgroundColor: holdProgress > 80 ? '#10b981' : '#06b6d4',
+                      boxShadow: `0 0 10px ${holdProgress > 80 ? '#10b981' : '#06b6d4'}`,
+                      transition: 'width 0.08s linear'
+                    }} />
+                  </div>
                 )}
-              </div>
 
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'var(--font-mono)',
-                color: confirmedGesture ? '#ffffff' : (holdProgress > 70 ? '#10b981' : 'var(--accent-cyan)'),
-                backgroundColor: confirmedGesture ? 'rgba(0,0,0,0.2)' : 'rgba(255, 255, 255, 0.08)',
-                padding: '2px 8px',
-                borderRadius: '999px'
-              }}>
-                {confirmedGesture ? 'CONFIRMED' : `${holdProgress}%`}
-              </span>
-            </div>
-
-            {/* Hold-to-Confirm Animated Progress Bar */}
-            {!confirmedGesture && (
-              <div style={{
-                width: '100%',
-                height: '7px',
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                borderRadius: '999px',
-                overflow: 'hidden'
-              }}>
+                {/* Instruction / Status Text */}
                 <div style={{
-                  width: `${holdProgress}%`,
-                  height: '100%',
-                  borderRadius: '999px',
-                  backgroundColor: holdProgress > 80 ? '#10b981' : '#06b6d4',
-                  boxShadow: `0 0 10px ${holdProgress > 80 ? '#10b981' : '#06b6d4'}`,
-                  transition: 'width 0.08s linear'
-                }} />
-              </div>
+                  fontSize: '11px',
+                  color: confirmedGesture ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  {confirmedGesture ? (
+                    <span>Confirmed & added to detected text</span>
+                  ) : (
+                    <span>Hold steady to recognize sign ({holdProgress}%)</span>
+                  )}
+                </div>
+              </>
             )}
-
-            {/* Instruction / Status Text */}
-            <div style={{
-              fontSize: '11px',
-              color: confirmedGesture ? '#ffffff' : 'var(--text-secondary)',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              {confirmedGesture ? (
-                <span>Confirmed & added to detected text</span>
-              ) : (
-                <span>Hold steady to recognize sign ({holdProgress}%)</span>
-              )}
-            </div>
           </div>
         )}
 
@@ -1327,23 +1367,27 @@ export default function SignInputCard({
               <button
                 onClick={processCompletedSigning}
                 disabled={motionState === 'analyzing'}
-                title="Click or pause to instantly convert your gesture into a full sentence"
+                title="Click anytime to have Gemini 3.5 Vision AI analyze your sign and guess what you are saying"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(6, 182, 212, 0.25)',
-                  border: '1px solid rgba(6, 182, 212, 0.5)',
+                  gap: '6px',
+                  padding: '7px 15px',
+                  borderRadius: '8px',
+                  backgroundColor: '#06b6d4',
+                  border: 'none',
                   color: '#ffffff',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   fontWeight: 600,
-                  cursor: 'pointer'
+                  cursor: motionState === 'analyzing' ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 15px rgba(6, 182, 212, 0.45)',
+                  transition: 'all 0.2s ease'
                 }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0891b2'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#06b6d4'}
               >
-                <Sparkles size={12} color="var(--accent-cyan)" />
-                <span>Finish & Speak Sentence</span>
+                <Sparkles size={14} color="#ffffff" className={motionState === 'analyzing' ? 'animate-spin' : ''} />
+                <span>{motionState === 'analyzing' ? 'Analyzing Sign...' : 'AI Guess Sign (Gemini)'}</span>
               </button>
 
               <button
