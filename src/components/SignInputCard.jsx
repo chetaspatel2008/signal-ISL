@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera, CameraOff, Scan, RotateCcw, Play, Square, Users, Sparkles, Type, Hash, MessageSquare, Space, Delete, Key, Clock, CheckCircle2 } from 'lucide-react';
+import { Camera, CameraOff, Scan, RotateCcw, Play, Square, Users, Sparkles, Type, Hash, MessageSquare, Space, Delete, Clock, CheckCircle2 } from 'lucide-react';
 import { classifyHands, ALPHABET_A_TO_Z, NUMBERS_0_TO_10, FULL_SIGN_VOCABULARY, distance } from '../utils/signClassifier';
 import { uniSignStreamProcessor } from '../utils/uniSignEngine';
-import { aiVisionService } from '../utils/aiVisionService';
 
 export default function SignInputCard({
   signLanguage,
@@ -18,8 +17,7 @@ export default function SignInputCard({
   setInputMode,
   onFingerspellLetter,
   onFingerspellSpace,
-  onFingerspellBackspace,
-  onOpenApiKeyModal
+  onFingerspellBackspace
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -167,7 +165,7 @@ export default function SignInputCard({
   onPoseResultsRef.current = onPoseResults;
 
   /**
-   * Finalize the signed thought using Gemini Vision AI with multi-frame clip context when the person pauses
+   * Finalize the signed thought using pure Uni-Sign (ICLR 2025) ST-GCN multi-frame sequence translation
    */
   const processCompletedSigning = useCallback(async () => {
     if (!videoRef.current || isAnalyzingRef.current) return;
@@ -178,67 +176,49 @@ export default function SignInputCard({
     isAnalyzingRef.current = true;
     setMotionState('analyzing');
 
-    // Extract keyframes from the 16-frame temporal buffer (start, peak, pause) like signBridge
-    const buf = clipBufferRef.current;
-    let keyframesToSend = [];
-
-    if (buf.length >= 3) {
-      keyframesToSend = [
-        buf[0].base64,
-        buf[Math.floor(buf.length / 2)].base64,
-        buf[buf.length - 1].base64
-      ];
-    } else if (buf.length > 0) {
-      keyframesToSend = [buf[buf.length - 1].base64];
-    } else {
-      const currentSnap = aiVisionService.captureFrameFromVideo(videoRef.current);
-      if (currentSnap) keyframesToSend = [currentSnap];
-    }
-
     try {
-      if (aiVisionService.hasApiKey() && keyframesToSend.length > 0) {
-        const anchorHint = currentGesture ? `${currentGesture.name} (anchor: ${currentGesture.anchor || 'body'})` : '';
-        const result = await aiVisionService.translateSignedSequence(keyframesToSend, signLanguage, anchorHint);
+      const result = uniSignStreamProcessor.translateSequence(clipBufferRef.current, currentGesture, {
+        language: signLanguage,
+        mode: inputMode
+      });
 
-        if (result && result.detected && (result.text || result.signName || result.sentence)) {
-          lastProcessedTimeRef.current = Date.now();
-          const cleanText = (result.text || result.sentence || result.signName || '').trim();
-          const isLetter = result.type === 'letter' || (cleanText.length === 1 && /^[A-Z]$/i.test(cleanText));
-          const isNumber = result.type === 'number' || (cleanText.length === 1 && /^[0-9]$/.test(cleanText));
-          const isWord = !isLetter && !isNumber;
+      if (result && result.detected && (result.text || result.signName)) {
+        lastProcessedTimeRef.current = Date.now();
+        const cleanText = (result.text || result.signName || '').trim();
+        const isLetter = result.type === 'letter' || (cleanText.length === 1 && /^[A-Z]$/i.test(cleanText));
+        const isNumber = result.type === 'number' || (cleanText.length === 1 && /^[0-9]$/.test(cleanText));
+        const isWord = !isLetter && !isNumber;
 
-          const signObj = {
-            id: (result.signName || cleanText).toLowerCase().replace(/\s+/g, '_'),
-            name: result.signName || (isLetter ? `Letter ${cleanText.toUpperCase()}` : cleanText),
-            type: isLetter ? 'letter' : (isNumber ? 'number' : 'word'),
-            text: isLetter ? cleanText.toUpperCase() : cleanText,
-            phrase: isLetter ? cleanText.toUpperCase() : cleanText,
-            isLetter: isLetter,
-            letter: isLetter ? cleanText.toUpperCase() : undefined,
-            isNumber: isNumber,
-            digit: isNumber ? cleanText : undefined,
-            isWord: isWord,
-            hindiPhrase: result.hindi || result.hindiSentence || '',
-            confidence: result.confidence || 0.98,
-            source: 'Uni-Sign (ICLR 2025) ST-GCN Buffer'
-          };
+        const signObj = {
+          id: (result.signName || cleanText).toLowerCase().replace(/\s+/g, '_'),
+          name: result.signName || (isLetter ? `Letter ${cleanText.toUpperCase()}` : cleanText),
+          type: isLetter ? 'letter' : (isNumber ? 'number' : 'word'),
+          text: isLetter ? cleanText.toUpperCase() : cleanText,
+          phrase: isLetter ? cleanText.toUpperCase() : cleanText,
+          isLetter: isLetter,
+          letter: isLetter ? cleanText.toUpperCase() : undefined,
+          isNumber: isNumber,
+          digit: isNumber ? cleanText : undefined,
+          isWord: isWord,
+          hindiPhrase: result.hindi || '',
+          confidence: result.confidence || 0.98,
+          source: 'Uni-Sign (ICLR 2025) ST-GCN Buffer'
+        };
 
-          setCurrentGesture(signObj);
-          setConfirmedGesture(signObj);
-          setHoldProgress(100);
-          setDetectionConfidence(Math.round(signObj.confidence * 100));
-          setLastSpokenPhrase(signObj.text);
-          onGestureDetected(signObj);
+        setCurrentGesture(signObj);
+        setConfirmedGesture(signObj);
+        setHoldProgress(100);
+        setDetectionConfidence(Math.round(signObj.confidence * 100));
+        setLastSpokenPhrase(signObj.text);
+        onGestureDetected(signObj);
 
-          if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
-          confirmedTimeoutRef.current = setTimeout(() => {
-            setConfirmedGesture(null);
-            setHoldProgress(0);
-            setCandidateGesture(null);
-          }, 1500);
-        }
+        if (confirmedTimeoutRef.current) clearTimeout(confirmedTimeoutRef.current);
+        confirmedTimeoutRef.current = setTimeout(() => {
+          setConfirmedGesture(null);
+          setHoldProgress(0);
+          setCandidateGesture(null);
+        }, 1500);
       } else if (currentGesture) {
-        // Fallback to recognized on-device gesture if offline or no key
         lastProcessedTimeRef.current = Date.now();
         setConfirmedGesture(currentGesture);
         setHoldProgress(100);
@@ -253,12 +233,14 @@ export default function SignInputCard({
         }, 1500);
       }
     } catch (err) {
-      console.error('Turn-taking translation error:', err);
+      console.error('Uni-Sign ST-GCN translation error:', err);
     } finally {
-      isAnalyzingRef.current = false;
-      setMotionState('idle');
+      setTimeout(() => {
+        isAnalyzingRef.current = false;
+        setMotionState('idle');
+      }, 350);
     }
-  }, [signLanguage, currentGesture, onGestureDetected]);
+  }, [signLanguage, inputMode, currentGesture, onGestureDetected]);
 
   /**
    * Helper to draw connections manually if drawing_utils CDN is delayed
@@ -377,21 +359,19 @@ export default function SignInputCard({
         }
       });
 
-      // Maintain signBridge 16-frame sliding temporal clip buffer (~12.5 FPS / 80ms)
+      // Maintain Uni-Sign 16-frame sliding temporal clip buffer (~12.5 FPS / 80ms)
       const now = Date.now();
       if (now - lastBufferTimeRef.current >= 80) {
         lastBufferTimeRef.current = now;
-        const snap = aiVisionService.captureFrameFromVideo(videoRef.current);
-        if (snap) {
-          clipBufferRef.current.push({
-            base64: snap,
-            timestamp: now
-          });
-          if (clipBufferRef.current.length > CLIP_LENGTH) {
-            clipBufferRef.current.shift();
-          }
-          setBufferFillCount(clipBufferRef.current.length);
+        clipBufferRef.current.push({
+          handsLandmarks: results.multiHandLandmarks,
+          poseLandmarks: poseLandmarksRef.current,
+          timestamp: now
+        });
+        if (clipBufferRef.current.length > CLIP_LENGTH) {
+          clipBufferRef.current.shift();
         }
+        setBufferFillCount(clipBufferRef.current.length);
       }
 
       // Multi-point motion velocity tracking across wrist and fingertips
@@ -438,9 +418,9 @@ export default function SignInputCard({
               processCompletedSigning();
             }, 300); // 300ms verification pause
           }
-        } else if (inputMode === 'phrases' && !isMoving && !isAnalyzingRef.current && aiVisionService.hasApiKey()) {
-          // In phrases mode: If hands are held steady and not in motion, let Gemini Vision interpret
-          if (now - lastMotionTimeRef.current > 900 && now - lastProcessedTimeRef.current > 2500) {
+        } else if (inputMode === 'phrases' && !isMoving && !isAnalyzingRef.current) {
+          // In phrases mode: If hands are held steady and not in motion, let Uni-Sign ST-GCN interpret
+          if (now - lastMotionTimeRef.current > 850 && now - lastProcessedTimeRef.current > 2200) {
             if (!pauseTriggerTimeoutRef.current && clipBufferRef.current.length >= 3) {
               setMotionState('paused');
               pauseTriggerTimeoutRef.current = setTimeout(() => {
@@ -841,27 +821,25 @@ export default function SignInputCard({
           </div>
         </div>
 
-        {/* Gemini Vision Status & Language */}
+        {/* Uni-Sign Engine Status & Language */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={onOpenApiKeyModal}
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '5px 10px',
+              padding: '5px 12px',
               borderRadius: '6px',
-              backgroundColor: hasApiKey ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${hasApiKey ? 'rgba(6, 182, 212, 0.35)' : 'var(--border-subtle)'}`,
-              color: hasApiKey ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              color: '#10b981',
               fontSize: '11px',
-              fontWeight: 500,
-              cursor: 'pointer'
+              fontWeight: 600
             }}
           >
-            <Sparkles size={13} color="var(--accent-cyan)" />
-            <span>{hasApiKey ? 'Gemini 3.8 Vision Active' : 'Connect Key'}</span>
-          </button>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+            <span>Uni-Sign ST-GCN Online</span>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <label htmlFor="sign-lang-select" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -1378,7 +1356,7 @@ export default function SignInputCard({
               <button
                 onClick={processCompletedSigning}
                 disabled={motionState === 'analyzing'}
-                title="Click anytime to have Gemini 3.5 Vision AI accurately recognize whether this is a letter or a word sign"
+                title="Click anytime to have Uni-Sign (ICLR 2025) ST-GCN accurately recognize whether this is a letter or a word sign"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1698,7 +1676,7 @@ export default function SignInputCard({
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               {cameraActive
-                ? (isSessionActive ? 'Sign freely. When you stop moving, Gemini AI translates your full thought into spoken audio.' : 'Camera ready. Click Start session to begin.')
+                ? (isSessionActive ? 'Sign freely. When you stop moving, Uni-Sign translates your sign directly into spoken audio.' : 'Camera ready. Click Start session to begin.')
                 : 'Enable your camera, then start a session to translate.'}
             </div>
           </div>

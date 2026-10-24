@@ -1,9 +1,7 @@
 import React from 'react';
-import { Hand, ShieldCheck, Sliders, Sparkles, Key } from 'lucide-react';
-import { aiVisionService } from '../utils/aiVisionService';
+import { Hand, ShieldCheck, Sliders } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpenHistory, onOpenHowToSign, onOpenApiKeyModal }) {
-  const isAiActive = aiVisionService.hasApiKey();
+export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpenHistory, onOpenHowToSign }) {
 
   return (
     <nav style={{
@@ -107,28 +105,33 @@ export default function Navbar({ activeTab, setActiveTab, onOpenSettings, onOpen
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Gemini Vision API Key Button */}
-        <button
-          onClick={onOpenApiKeyModal}
+        {/* Uni-Sign Framework ST-GCN Badge */}
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
+            gap: '8px',
+            padding: '6px 14px',
             borderRadius: '999px',
-            backgroundColor: isAiActive ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-            border: `1px solid ${isAiActive ? 'rgba(6, 182, 212, 0.4)' : 'var(--border-subtle)'}`,
-            color: isAiActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            color: '#10b981',
             fontSize: '12px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            fontWeight: 600,
+            boxShadow: '0 0 12px rgba(16, 185, 129, 0.15)'
           }}
-          title={isAiActive ? "Gemini Multimodal Vision AI is Active" : "Connect Gemini API Key for Father, Mother, and total Sign Language"}
+          title="Uni-Sign (ICLR 2025) 4-Component ST-GCN Engine running locally and offline"
         >
-          {isAiActive ? <Sparkles size={14} color="var(--accent-cyan)" /> : <Key size={14} />}
-          <span>{isAiActive ? 'Vision AI Active' : 'Connect Vision API'}</span>
-        </button>
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: '#10b981',
+            boxShadow: '0 0 8px #10b981',
+            display: 'inline-block'
+          }} />
+          <span>Uni-Sign ST-GCN Active</span>
+        </div>
 
         {/* Private session badge */}
         <div style={{

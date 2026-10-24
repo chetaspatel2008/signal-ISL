@@ -9,7 +9,6 @@ import Footer from './components/Footer';
 import SessionHistoryModal from './components/SessionHistoryModal';
 import HowToSignModal from './components/HowToSignModal';
 import SettingsModal from './components/SettingsModal';
-import ApiKeyModal from './components/ApiKeyModal';
 import { uniSignSpeechConverter } from './utils/uniSignSpeechConverter';
 import confetti from 'canvas-confetti';
 
@@ -34,7 +33,6 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHowToSignOpen, setIsHowToSignOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [mirrorMode, setMirrorMode] = useState(false);
   const [sensitivity, setSensitivity] = useState(70);
 
@@ -183,7 +181,6 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenHowToSign={() => setIsHowToSignOpen(true)}
-        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
       />
 
       {/* Main Workspace Area */}
@@ -225,7 +222,6 @@ export default function App() {
             onFingerspellLetter={handleFingerspellLetter}
             onFingerspellSpace={handleFingerspellSpace}
             onFingerspellBackspace={handleFingerspellBackspace}
-            onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
           />
 
           {/* Right Column: Detected Text & Natural Speech */}
@@ -286,12 +282,6 @@ export default function App() {
         setMirrorMode={setMirrorMode}
         sensitivity={sensitivity}
         setSensitivity={setSensitivity}
-      />
-
-      <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-        onApiKeySaved={() => {}}
       />
     </div>
   );
